@@ -270,18 +270,29 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
 
 // 基本確認コンポーネント（犬・猫・混在に対応）
 function BasicCheck({ hasDog, hasCat }: { hasDog: boolean; hasCat: boolean }) {
-  const excLabel = hasCat && !hasDog ? 'トイレの状況' : '排泄の状況'
   return (
-    <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-4">
+    <section className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-5">
       <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">基本確認</h2>
+
+      {/* オシッコ */}
       <div>
-        <p className="text-sm font-medium text-gray-700 mb-3">{excLabel}</p>
-        <div className="space-y-3">
-          <Counter id="pee" label="🟡 オシッコ" />
-          <Counter id="poop" label="🟤 ウンチ" />
-        </div>
+        <p className="text-sm font-medium text-gray-700 mb-2">🟡 オシッコ</p>
+        <Counter id="pee" />
+        <StatusButtons id="pee-status" options={['普通','多い','少ない']} color="blue" />
       </div>
-      <div className="flex flex-wrap gap-4">
+
+      {/* ウンチ */}
+      <div>
+        <p className="text-sm font-medium text-gray-700 mb-2">🟤 ウンチ</p>
+        <Counter id="poop" />
+        <StatusButtons id="poop-status" options={['普通','柔らかい','硬い','多い','少ない']} color="amber" />
+      </div>
+
+      {/* 粗相 */}
+      <SoilingCheck />
+
+      {/* その他チェック */}
+      <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-100">
         {hasDog && (
           <>
             <CheckItem id="chk-feed" label="🍚 ゴハン食べた" />
@@ -300,11 +311,10 @@ function BasicCheck({ hasDog, hasCat }: { hasDog: boolean; hasCat: boolean }) {
   )
 }
 
-function Counter({ id, label }: { id: string; label: string }) {
+function Counter({ id }: { id: string }) {
   const [count, setCount] = useState(0)
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-gray-600 w-28">{label}</span>
+    <div className="flex items-center gap-3 mb-2">
       <button onClick={() => setCount((c) => Math.max(0, c - 1))}
         className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 text-xl font-medium flex items-center justify-center active:bg-gray-200 select-none">−</button>
       <span className="text-xl font-bold text-gray-900 w-8 text-center tabular-nums">{count}</span>
@@ -312,6 +322,46 @@ function Counter({ id, label }: { id: string; label: string }) {
         className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-700 text-xl font-medium flex items-center justify-center active:bg-emerald-100 select-none">＋</button>
       <span className="text-sm text-gray-400">回</span>
       <input type="hidden" id={id} value={count} />
+    </div>
+  )
+}
+
+function StatusButtons({ id, options, color }: { id: string; options: string[]; color: 'blue' | 'amber' }) {
+  const [selected, setSelected] = useState<string | null>(null)
+  const activeClass = color === 'amber'
+    ? 'bg-amber-600 border-amber-600 text-white'
+    : 'bg-blue-500 border-blue-500 text-white'
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((o) => (
+        <button key={o} id={`${id}-${o}`}
+          onClick={() => setSelected(selected === o ? null : o)}
+          className={`px-3 py-1.5 rounded-full text-xs border transition-colors select-none ${
+            selected === o ? activeClass : 'border-gray-300 text-gray-600'
+          }`}
+        >
+          {o}
+        </button>
+      ))}
+      <input type="hidden" id={id} value={selected ?? ''} />
+    </div>
+  )
+}
+
+function SoilingCheck() {
+  const [checked, setChecked] = useState(false)
+  return (
+    <div>
+      <label className="flex items-center gap-2.5 cursor-pointer">
+        <input type="checkbox" id="chk-soiling" checked={checked}
+          onChange={(e) => setChecked(e.target.checked)}
+          className="w-6 h-6 rounded accent-red-500" />
+        <span className="text-sm font-medium text-gray-700">⚠️ 粗相があった</span>
+      </label>
+      {checked && (
+        <input type="text" id="soiling-place" placeholder="場所（例：玄関マット）"
+          className="mt-2 w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+      )}
     </div>
   )
 }
