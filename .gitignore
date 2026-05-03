@@ -1,0 +1,18 @@
+# 依存パッケージ（GitHubには上げない）
+node_modules/
+
+# Next.jsのビルドファイル
+.next/
+out/
+
+# 環境変数（APIキーが入るので絶対に上げない）
+.env
+.env.local
+.env.production
+
+# OS・エディタファイル
+.DS_Store
+*.pem
+
+# デバッグ
+npm-debug.log*

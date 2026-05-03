@@ -1,0 +1,66 @@
+import Anthropic from '@anthropic-ai/sdk'
+import { NextRequest, NextResponse } from 'next/server'
+
+const client = new Anthropic()
+
+const SYSTEM_PROMPT = `あなたはペットシッターサービスの報告書作成アシスタントです。
+スタッフが入力した各項目のメモをもとに、お客様向けのお世話報告文を作成してください。
+
+【作成ルール】
+- ヘッダー行：「M/D（曜日）HH:MM-HH:MM」形式を1行目に、次の行に「===」
+- 3行目から本文を「本日のお世話の様子です！」で開始
+- 敬体（です・ます調）で書く
+- ペットの名前を親しみを込めて使う（複数いる場合はそれぞれの名前を使う）
+- 絵文字を適度に使う（🐶🐱💕😊🙏🏻など）
+- 「！」を適度に使い明るい雰囲気を出す
+- 自然な文章の流れでつなげる（箇条書きにしない）
+- 「次回訪問予定」がある場合は本文の最後に入れる
+- 締め文は必ず「本日もありがとうございました🙏🏻\n\nまたご依頼ございましたらお知らせくださいませ🙏🏻」
+- 500〜700文字程度が目安
+- 空の項目は省略する`
+
+export async function POST(req: NextRequest) {
+  try {
+    const { pets, visitDateTime, fields } = (await req.json()) as {
+      pets: { name: string; type: 'dog' | 'cat' }[]
+      visitDateTime: string
+      fields: Record<string, string>
+    }
+
+    const hasDog = pets.some((p) => p.type === 'dog')
+    const hasCat = pets.some((p) => p.type === 'cat')
+    const petType = hasDog && hasCat ? '犬と猫' : hasDog ? '犬' : '猫'
+    const petNames = pets.map((p) => p.name).join('と')
+
+    const fieldLines = Object.entries(fields)
+      .filter(([, v]) => v?.trim())
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('\n')
+
+    const userPrompt = `以下の情報をもとに報告文を作成してください。
+
+訪問日時: ${visitDateTime}
+ペット名: ${petNames}
+種別: ${petType}
+
+【お世話内容メモ】
+${fieldLines}`
+
+    const message = await client.messages.create({
+      model: 'claude-haiku-4-5',
+      max_tokens: 1024,
+      system: SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userPrompt }],
+    })
+
+    const content = message.content[0]
+    if (content.type !== 'text') {
+      return NextResponse.json({ error: 'Unexpected response type' }, { status: 500 })
+    }
+
+    return NextResponse.json({ report: content.text })
+  } catch (error) {
+    console.error('Generate API error:', error)
+    return NextResponse.json({ error: '報告文の生成に失敗しました' }, { status: 500 })
+  }
+}
