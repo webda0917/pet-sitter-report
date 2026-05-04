@@ -97,13 +97,13 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <header className="bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3 sticky top-0 z-10">
+      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
         <button onClick={onBack} className="text-gray-600 hover:text-gray-800 p-1">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-gray-900">報告書を作成</h1>
+        <span className="text-base font-bold text-gray-700">報告書を作成</span>
       </header>
 
       <div className="p-4 space-y-4 max-w-lg mx-auto pb-10">
