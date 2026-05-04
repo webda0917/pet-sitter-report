@@ -4,6 +4,7 @@ import './globals.css'
 export const metadata: Metadata = {
   title: 'ハピフリ 報告書',
   description: 'ハピフリ ペットシッター お世話報告書作成',
+  robots: { index: false, follow: false },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,

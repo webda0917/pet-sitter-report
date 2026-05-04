@@ -91,7 +91,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
     }
   }
 
-  const inputClass = 'w-full max-w-full border border-gray-300 rounded-xl px-4 py-4 text-base text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500'
+  const inputClass = 'w-full min-w-0 border border-gray-300 rounded-xl px-4 py-4 text-base text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500'
   const sectionClass = 'bg-white rounded-2xl shadow-sm border border-gray-200 p-5 space-y-4'
   const sectionTitle = 'text-sm font-bold text-gray-700'
 
@@ -132,21 +132,25 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
           <h2 className={sectionTitle}>訪問日時</h2>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">開始</label>
-            <input
-              type="datetime-local"
-              value={startDatetime}
-              onChange={(e) => { setStartDatetime(e.target.value); setEndTime(getDefaultEndTime(e.target.value)) }}
-              className={inputClass}
-            />
+            <div className="overflow-hidden rounded-xl">
+              <input
+                type="datetime-local"
+                value={startDatetime}
+                onChange={(e) => { setStartDatetime(e.target.value); setEndTime(getDefaultEndTime(e.target.value)) }}
+                className={inputClass}
+              />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">終了時刻</label>
-            <input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className={inputClass}
-            />
+            <div className="overflow-hidden rounded-xl">
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className={inputClass}
+              />
+            </div>
           </div>
         </section>
 
@@ -204,17 +208,21 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">日付・開始</label>
-                  <input type="datetime-local" value={fields.nextStart ?? ''}
-                    onChange={(e) => setField('nextStart', e.target.value)}
-                    className={inputClass}
-                  />
+                  <div className="overflow-hidden rounded-xl">
+                    <input type="datetime-local" value={fields.nextStart ?? ''}
+                      onChange={(e) => setField('nextStart', e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">終了時刻（任意）</label>
-                  <input type="time" value={fields.nextEnd ?? ''}
-                    onChange={(e) => setField('nextEnd', e.target.value)}
-                    className={inputClass}
-                  />
+                  <div className="overflow-hidden rounded-xl">
+                    <input type="time" value={fields.nextEnd ?? ''}
+                      onChange={(e) => setField('nextEnd', e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
