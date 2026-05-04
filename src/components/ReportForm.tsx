@@ -91,7 +91,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
     }
   }
 
-  const inputClass = 'w-full border border-gray-300 rounded-xl px-4 py-4 text-base text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500'
+  const inputClass = 'w-full max-w-full border border-gray-300 rounded-xl px-4 py-4 text-base text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500'
   const sectionClass = 'bg-white rounded-2xl shadow-sm border border-gray-200 p-5 space-y-4'
   const sectionTitle = 'text-sm font-bold text-gray-700'
 
