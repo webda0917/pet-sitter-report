@@ -64,9 +64,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-gray-50 flex flex-col">
       <div className="flex-1 flex flex-col items-center justify-center p-6 gap-8">
-        <div className="text-center space-y-2">
-          <div className="text-6xl mb-4">🐾</div>
-          <h1 className="text-2xl font-bold text-gray-900">ペットシッター報告</h1>
+        <div className="text-center space-y-3">
+          <img src="/logo.svg" alt="ハピフリ" className="h-16 mx-auto" />
           <p className="text-sm text-gray-500">音声入力 → AI が報告文を作成 → LINEで送信</p>
         </div>
 
@@ -99,8 +98,8 @@ export default function Home() {
         )}
       </div>
 
-      <footer className="text-center text-xs text-gray-300 pb-8">
-        ストレンジブレイン株式会社
+      <footer className="text-center text-xs text-gray-400 pb-8">
+        ハピフリ お世話報告書
       </footer>
     </div>
   )

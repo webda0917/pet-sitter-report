@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'ペットシッター報告',
-  description: 'お世話報告文を音声入力でAI作成',
+  title: 'ハピフリ 報告書',
+  description: 'ハピフリ ペットシッター お世話報告書作成',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'ペットシッター報告',
+    title: 'ハピフリ 報告書',
   },
 }
 
