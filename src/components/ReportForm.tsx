@@ -132,25 +132,21 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
           <h2 className={sectionTitle}>訪問日時</h2>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">開始</label>
-            <div className="overflow-hidden rounded-xl">
-              <input
-                type="datetime-local"
-                value={startDatetime}
-                onChange={(e) => { setStartDatetime(e.target.value); setEndTime(getDefaultEndTime(e.target.value)) }}
-                className={inputClass}
-              />
-            </div>
+            <input
+              type="datetime-local"
+              value={startDatetime}
+              onChange={(e) => { setStartDatetime(e.target.value); setEndTime(getDefaultEndTime(e.target.value)) }}
+              className={inputClass}
+            />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">終了時刻</label>
-            <div className="overflow-hidden rounded-xl">
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className={inputClass}
-              />
-            </div>
+            <input
+              type="time"
+              value={endTime}
+              onChange={(e) => setEndTime(e.target.value)}
+              className={inputClass}
+            />
           </div>
         </section>
 
@@ -208,21 +204,17 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">日付・開始</label>
-                  <div className="overflow-hidden rounded-xl">
-                    <input type="datetime-local" value={fields.nextStart ?? ''}
-                      onChange={(e) => setField('nextStart', e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
+                  <input type="datetime-local" value={fields.nextStart ?? ''}
+                    onChange={(e) => setField('nextStart', e.target.value)}
+                    className={inputClass}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">終了時刻（任意）</label>
-                  <div className="overflow-hidden rounded-xl">
-                    <input type="time" value={fields.nextEnd ?? ''}
-                      onChange={(e) => setField('nextEnd', e.target.value)}
-                      className={inputClass}
-                    />
-                  </div>
+                  <input type="time" value={fields.nextEnd ?? ''}
+                    onChange={(e) => setField('nextEnd', e.target.value)}
+                    className={inputClass}
+                  />
                 </div>
               </div>
             </div>
