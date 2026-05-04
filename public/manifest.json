@@ -1,6 +1,6 @@
 {
-  "name": "ペットシッター報告",
-  "short_name": "PS報告",
+  "name": "ハピフリ 報告書",
+  "short_name": "ハピフリ",
   "description": "お世話報告文をAIで作成",
   "start_url": "/",
   "display": "standalone",

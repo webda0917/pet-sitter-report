@@ -69,13 +69,14 @@ export default function ClientManager({ onBack }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-4 py-4 flex items-center gap-3 sticky top-0 z-10">
+      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
         <button onClick={onBack} className="text-gray-500 hover:text-gray-700 p-1">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="text-lg font-bold text-gray-900 flex-1">顧客・ペット管理</h1>
+        <img src="/logo.svg" alt="ハピフリ" className="h-8" />
+        <h1 className="text-base font-bold text-gray-700 flex-1">顧客・ペット管理</h1>
         <button
           onClick={() => { setEditingClient(null); setShowClientForm(true) }}
           className="bg-emerald-600 text-white text-sm px-3 py-1.5 rounded-lg font-medium"
