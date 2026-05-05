@@ -2,8 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-input[type="datetime-local"],
-input[type="time"] {
+input[type="date"] {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;

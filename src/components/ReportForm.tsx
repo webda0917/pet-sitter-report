@@ -148,12 +148,10 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">開始時刻</label>
-            <input
-              type="time"
-              step={300}
+            <TimeSelect
               value={startDatetime.split('T')[1] ?? ''}
-              onChange={(e) => {
-                const newDt = (startDatetime.split('T')[0] ?? '') + 'T' + e.target.value
+              onChange={(v) => {
+                const newDt = (startDatetime.split('T')[0] ?? '') + 'T' + v
                 setStartDatetime(newDt)
                 setEndTime(getDefaultEndTime(newDt))
               }}
@@ -162,11 +160,9 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">終了時刻</label>
-            <input
-              type="time"
-              step={300}
+            <TimeSelect
               value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
+              onChange={setEndTime}
               className={inputClass}
             />
           </div>
@@ -271,22 +267,20 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">開始時刻</label>
-                  <input
-                    type="time"
-                    step={300}
+                  <TimeSelect
                     value={fields.nextStart?.split('T')[1] ?? ''}
-                    onChange={(e) => setField('nextStart', (fields.nextStart?.split('T')[0] ?? '') + 'T' + e.target.value)}
+                    onChange={(v) => setField('nextStart', (fields.nextStart?.split('T')[0] ?? '') + 'T' + v)}
                     className={inputClass}
+                    placeholder="時刻を選択"
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">終了時刻（任意）</label>
-                  <input
-                    type="time"
-                    step={300}
+                  <TimeSelect
                     value={fields.nextEnd ?? ''}
-                    onChange={(e) => setField('nextEnd', e.target.value)}
+                    onChange={(v) => setField('nextEnd', v)}
                     className={inputClass}
+                    placeholder="時刻を選択"
                   />
                 </div>
               </div>
@@ -416,5 +410,25 @@ function CheckItem({ id, label }: { id: string; label: string }) {
       <input type="checkbox" id={id} className="w-6 h-6 rounded accent-emerald-600" />
       <span className="text-base text-gray-700">{label}</span>
     </label>
+  )
+}
+
+function TimeSelect({ value, onChange, className, placeholder }: {
+  value: string
+  onChange: (v: string) => void
+  className: string
+  placeholder?: string
+}) {
+  const times: string[] = []
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 5) {
+      times.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`)
+    }
+  }
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} className={className}>
+      <option value="">{placeholder ?? '--:--'}</option>
+      {times.map((t) => <option key={t} value={t}>{t}</option>)}
+    </select>
   )
 }
