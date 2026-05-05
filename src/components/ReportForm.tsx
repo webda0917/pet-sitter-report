@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function ReportForm({ clients, onGenerate, onBack }: Props) {
-  const [selectedClientId, setSelectedClientId] = useState<string>(clients[0]?.id ?? '')
+  const [selectedClientId, setSelectedClientId] = useState<string>('')
   const [startDatetime, setStartDatetime] = useState(getDefaultStartDatetime)
   const [endTime, setEndTime] = useState(() => getDefaultEndTime(getDefaultStartDatetime()))
   const [fields, setFields] = useState<Record<string, string>>({})
@@ -95,6 +95,8 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
   const sectionClass = 'bg-white rounded-2xl shadow-sm border border-gray-200 p-5 space-y-4'
   const sectionTitle = 'text-sm font-bold text-gray-700'
 
+  const hasNextVisit = !!(fields.nextStart || fields.nextEnd)
+
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
@@ -116,6 +118,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
             onChange={(e) => setSelectedClientId(e.target.value)}
             className={inputClass}
           >
+            <option value="">お客様を選択してください</option>
             {clients.filter((c) => c.pets.length > 0).map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
@@ -127,13 +130,14 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
           )}
         </section>
 
-        {/* 訪問日時（縦並び） */}
+        {/* 訪問日時 */}
         <section className={sectionClass}>
           <h2 className={sectionTitle}>訪問日時</h2>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">開始</label>
             <input
               type="datetime-local"
+              step={300}
               value={startDatetime}
               onChange={(e) => { setStartDatetime(e.target.value); setEndTime(getDefaultEndTime(e.target.value)) }}
               className={inputClass}
@@ -143,6 +147,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
             <label className="block text-sm font-medium text-gray-600 mb-2">終了時刻</label>
             <input
               type="time"
+              step={300}
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
               className={inputClass}
@@ -190,6 +195,8 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
         {pets.length > 0 && (
           <section className={sectionClass}>
             <h2 className={sectionTitle}>退出</h2>
+
+            {/* 施錠 */}
             <label className="flex items-center gap-3">
               <input
                 type="checkbox"
@@ -199,19 +206,59 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
               />
               <span className="text-base font-medium text-gray-700">施錠・退出済み</span>
             </label>
+
+            {/* 鍵の返却 */}
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">次回訪問予定（任意）</label>
+              <p className="text-sm font-medium text-gray-700 mb-2">🔑 鍵の返却</p>
+              <div className="flex gap-2">
+                {(['あり', 'なし'] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => setField('keyReturn', fields.keyReturn === opt ? '' : opt)}
+                    className={`px-5 py-2 rounded-full text-sm border font-medium transition-colors select-none ${
+                      fields.keyReturn === opt
+                        ? 'bg-emerald-600 border-emerald-600 text-white'
+                        : 'border-gray-300 text-gray-600 bg-white'
+                    }`}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 次回訪問 */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-600">次回訪問予定（任意）</label>
+                {hasNextVisit && (
+                  <button
+                    type="button"
+                    onClick={() => { setField('nextStart', ''); setField('nextEnd', '') }}
+                    className="text-sm text-gray-400 underline"
+                  >
+                    クリア
+                  </button>
+                )}
+              </div>
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">日付・開始</label>
-                  <input type="datetime-local" value={fields.nextStart ?? ''}
+                  <input
+                    type="datetime-local"
+                    step={300}
+                    value={fields.nextStart ?? ''}
                     onChange={(e) => setField('nextStart', e.target.value)}
                     className={inputClass}
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">終了時刻（任意）</label>
-                  <input type="time" value={fields.nextEnd ?? ''}
+                  <input
+                    type="time"
+                    step={300}
+                    value={fields.nextEnd ?? ''}
                     onChange={(e) => setField('nextEnd', e.target.value)}
                     className={inputClass}
                   />
@@ -268,19 +315,17 @@ function BasicCheck({ hasDog, hasCat }: { hasDog: boolean; hasCat: boolean }) {
       <SoilingCheck />
 
       <div className="flex flex-wrap gap-4 pt-3 border-t border-gray-100">
-        {hasDog && (
-          <>
-            <CheckItem id="chk-feed" label="🍚 ゴハン食べた" />
-            <CheckItem id="chk-water-dog" label="💧 お水飲んだ" />
-          </>
-        )}
+        {hasDog && <CheckItem id="chk-water-dog" label="💧 お水飲んだ" />}
         {hasCat && (
           <>
             <CheckItem id="chk-toilet" label="🧹 トイレ掃除済み" />
             <CheckItem id="chk-water-cat" label="💧 お水を交換" />
-            <CheckItem id="chk-food" label="🍚 ゴハンを補充" />
           </>
         )}
+        <CheckItem id="chk-feed-refill" label="🍚 ゴハン補充" />
+        <CheckItem id="chk-feed-replace" label="🍚 ゴハン交換" />
+        <CheckItem id="chk-brushing" label="🪮 ブラッシング" />
+        <CheckItem id="chk-play" label="🎾 遊び" />
       </div>
     </section>
   )
