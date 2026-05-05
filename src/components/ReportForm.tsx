@@ -135,36 +135,30 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
           <h2 className={sectionTitle}>訪問日時</h2>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">開始日</label>
-            <input
-              type="date"
+            <DateSelect
               value={startDatetime.split('T')[0] ?? ''}
-              onChange={(e) => {
-                const newDt = e.target.value + 'T' + (startDatetime.split('T')[1] ?? '00:00')
+              onChange={(d) => {
+                const t = startDatetime.split('T')[1] ?? '00:00'
+                const newDt = d + 'T' + t
                 setStartDatetime(newDt)
                 setEndTime(getDefaultEndTime(newDt))
               }}
-              className={inputClass}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">開始時刻</label>
-            <TimeSelect
+            <TimeSelectPair
               value={startDatetime.split('T')[1] ?? ''}
-              onChange={(v) => {
-                const newDt = (startDatetime.split('T')[0] ?? '') + 'T' + v
+              onChange={(t) => {
+                const newDt = (startDatetime.split('T')[0] ?? '') + 'T' + t
                 setStartDatetime(newDt)
                 setEndTime(getDefaultEndTime(newDt))
               }}
-              className={inputClass}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-600 mb-2">終了時刻</label>
-            <TimeSelect
-              value={endTime}
-              onChange={setEndTime}
-              className={inputClass}
-            />
+            <TimeSelectPair value={endTime} onChange={setEndTime} />
           </div>
         </section>
 
@@ -258,29 +252,26 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">日付</label>
-                  <input
-                    type="date"
+                  <DateSelect
                     value={fields.nextStart?.split('T')[0] ?? ''}
-                    onChange={(e) => setField('nextStart', e.target.value + 'T' + (fields.nextStart?.split('T')[1] ?? '00:00'))}
-                    className={inputClass}
+                    onChange={(d) => setField('nextStart', d + 'T' + (fields.nextStart?.split('T')[1] ?? '00:00'))}
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">開始時刻</label>
-                  <TimeSelect
+                  <TimeSelectPair
                     value={fields.nextStart?.split('T')[1] ?? ''}
-                    onChange={(v) => setField('nextStart', (fields.nextStart?.split('T')[0] ?? '') + 'T' + v)}
-                    className={inputClass}
-                    placeholder="時刻を選択"
+                    onChange={(t) => {
+                      const date = fields.nextStart?.split('T')[0] || new Date().toISOString().split('T')[0]
+                      setField('nextStart', date + 'T' + t)
+                    }}
                   />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-500 mb-1">終了時刻（任意）</label>
-                  <TimeSelect
+                  <TimeSelectPair
                     value={fields.nextEnd ?? ''}
                     onChange={(v) => setField('nextEnd', v)}
-                    className={inputClass}
-                    placeholder="時刻を選択"
                   />
                 </div>
               </div>
@@ -413,22 +404,54 @@ function CheckItem({ id, label }: { id: string; label: string }) {
   )
 }
 
-function TimeSelect({ value, onChange, className, placeholder }: {
-  value: string
-  onChange: (v: string) => void
-  className: string
-  placeholder?: string
-}) {
-  const times: string[] = []
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 5) {
-      times.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`)
-    }
+const sel = 'flex-1 border border-gray-300 rounded-xl px-2 py-4 text-base text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500'
+
+function DateSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const today = new Date()
+  const parts = value?.split('-') ?? []
+  const y = parts[0] ? Number(parts[0]) : today.getFullYear()
+  const mo = parts[1] ? Number(parts[1]) : today.getMonth() + 1
+  const d = parts[2] ? Number(parts[2]) : today.getDate()
+  const daysInMonth = new Date(y, mo, 0).getDate()
+  const curY = today.getFullYear()
+  const update = (ny: number, nm: number, nd: number) => {
+    const safe = Math.min(nd, new Date(ny, nm, 0).getDate())
+    onChange(`${ny}-${nm.toString().padStart(2, '0')}-${safe.toString().padStart(2, '0')}`)
   }
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={className}>
-      <option value="">{placeholder ?? '--:--'}</option>
-      {times.map((t) => <option key={t} value={t}>{t}</option>)}
-    </select>
+    <div className="flex gap-2">
+      <select value={y} onChange={(e) => update(Number(e.target.value), mo, d)} className={sel}>
+        {[curY, curY + 1].map((yr) => <option key={yr} value={yr}>{yr}年</option>)}
+      </select>
+      <select value={mo} onChange={(e) => update(y, Number(e.target.value), d)} className={sel}>
+        {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}月</option>)}
+      </select>
+      <select value={d} onChange={(e) => update(y, mo, Number(e.target.value))} className={sel}>
+        {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => <option key={day} value={day}>{day}日</option>)}
+      </select>
+    </div>
+  )
+}
+
+function TimeSelectPair({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parts = value?.split(':') ?? []
+  const hh = parts[0] ?? ''
+  const mm = parts[1] ?? ''
+  const update = (h: string, m: string) => { if (h && m) onChange(`${h}:${m}`) }
+  return (
+    <div className="flex gap-2">
+      <select value={hh} onChange={(e) => update(e.target.value, mm)} className={sel}>
+        <option value="">時</option>
+        {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+          <option key={h} value={h.toString().padStart(2, '0')}>{h}時</option>
+        ))}
+      </select>
+      <select value={mm} onChange={(e) => update(hh, e.target.value)} className={sel}>
+        <option value="">分</option>
+        {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+          <option key={m} value={m.toString().padStart(2, '0')}>{m}分</option>
+        ))}
+      </select>
+    </div>
   )
 }
