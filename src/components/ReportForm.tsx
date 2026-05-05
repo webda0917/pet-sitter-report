@@ -108,7 +108,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
         <span className="text-base font-bold text-gray-700">報告書を作成</span>
       </header>
 
-      <div className="p-4 space-y-4 max-w-lg mx-auto pb-10">
+      <div className="p-4 space-y-4 max-w-lg mx-auto pb-10 overflow-x-hidden">
 
         {/* 顧客選択 */}
         <section className={sectionClass}>

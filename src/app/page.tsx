@@ -39,23 +39,24 @@ export default function Home() {
     )
   }
 
-  if (view === 'report') {
+  if (view === 'report' || view === 'preview') {
     return (
-      <ReportForm
-        clients={clients.filter((c) => c.pets.length > 0)}
-        onGenerate={(text) => { setReport(text); setView('preview') }}
-        onBack={() => setView('home')}
-      />
-    )
-  }
-
-  if (view === 'preview') {
-    return (
-      <ReportPreview
-        report={report}
-        onEdit={() => setView('report')}
-        onNew={() => { setReport(''); setView('home') }}
-      />
+      <>
+        <div style={{ display: view === 'report' ? undefined : 'none' }}>
+          <ReportForm
+            clients={clients.filter((c) => c.pets.length > 0)}
+            onGenerate={(text) => { setReport(text); setView('preview') }}
+            onBack={() => setView('home')}
+          />
+        </div>
+        {view === 'preview' && (
+          <ReportPreview
+            report={report}
+            onEdit={() => setView('report')}
+            onNew={() => { setReport(''); setView('home') }}
+          />
+        )}
+      </>
     )
   }
 

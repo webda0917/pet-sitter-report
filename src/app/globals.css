@@ -4,8 +4,7 @@
 
 input[type="datetime-local"],
 input[type="time"] {
-  -webkit-appearance: none;
-  appearance: none;
   width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
 }
