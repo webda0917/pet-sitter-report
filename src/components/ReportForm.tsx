@@ -134,12 +134,29 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
         <section className={sectionClass}>
           <h2 className={sectionTitle}>訪問日時</h2>
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-2">開始</label>
+            <label className="block text-sm font-medium text-gray-600 mb-2">開始日</label>
             <input
-              type="datetime-local"
+              type="date"
+              value={startDatetime.split('T')[0] ?? ''}
+              onChange={(e) => {
+                const newDt = e.target.value + 'T' + (startDatetime.split('T')[1] ?? '00:00')
+                setStartDatetime(newDt)
+                setEndTime(getDefaultEndTime(newDt))
+              }}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-2">開始時刻</label>
+            <input
+              type="time"
               step={300}
-              value={startDatetime}
-              onChange={(e) => { setStartDatetime(e.target.value); setEndTime(getDefaultEndTime(e.target.value)) }}
+              value={startDatetime.split('T')[1] ?? ''}
+              onChange={(e) => {
+                const newDt = (startDatetime.split('T')[0] ?? '') + 'T' + e.target.value
+                setStartDatetime(newDt)
+                setEndTime(getDefaultEndTime(newDt))
+              }}
               className={inputClass}
             />
           </div>
@@ -244,12 +261,21 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm text-gray-500 mb-1">日付・開始</label>
+                  <label className="block text-sm text-gray-500 mb-1">日付</label>
                   <input
-                    type="datetime-local"
+                    type="date"
+                    value={fields.nextStart?.split('T')[0] ?? ''}
+                    onChange={(e) => setField('nextStart', e.target.value + 'T' + (fields.nextStart?.split('T')[1] ?? '00:00'))}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-500 mb-1">開始時刻</label>
+                  <input
+                    type="time"
                     step={300}
-                    value={fields.nextStart ?? ''}
-                    onChange={(e) => setField('nextStart', e.target.value)}
+                    value={fields.nextStart?.split('T')[1] ?? ''}
+                    onChange={(e) => setField('nextStart', (fields.nextStart?.split('T')[0] ?? '') + 'T' + e.target.value)}
                     className={inputClass}
                   />
                 </div>

@@ -67,8 +67,9 @@ export function formatVisitDateTime(startDatetime: string, endTime: string): str
 
 export function getDefaultStartDatetime(): string {
   const now = new Date()
-  const minutes = now.getMinutes() < 30 ? 0 : 30
-  now.setMinutes(minutes, 0, 0)
+  const m = Math.ceil(now.getMinutes() / 5) * 5
+  now.setMinutes(m >= 60 ? 0 : m, 0, 0)
+  if (m >= 60) now.setHours(now.getHours() + 1)
   const pad = (n: number) => n.toString().padStart(2, '0')
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
 }
