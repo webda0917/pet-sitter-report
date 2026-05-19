@@ -35,18 +35,14 @@ export async function POST(req: NextRequest) {
     const petType = hasDog && hasCat ? '犬と猫' : hasDog ? '犬' : '猫'
     const petNames = pets.map((p) => p.name).join('と')
 
-    // 排泄情報
+    // 排泄情報（0回でも必ず出力）
     const peeCount = Number(fields.peeCount ?? 0)
     const poopCount = Number(fields.poopCount ?? 0)
     const excretionLines: string[] = []
-    if (peeCount > 0) {
-      const status = fields.peeStatus ? `（${fields.peeStatus}）` : ''
-      excretionLines.push(`オシッコ: ${peeCount}回${status}`)
-    }
-    if (poopCount > 0) {
-      const status = fields.poopStatus ? `（${fields.poopStatus}）` : ''
-      excretionLines.push(`ウンチ: ${poopCount}回${status}`)
-    }
+    const peeStatus = fields.peeStatus ? `（${fields.peeStatus}）` : ''
+    excretionLines.push(peeCount > 0 ? `オシッコ: ${peeCount}回${peeStatus}` : 'オシッコ: ありませんでした')
+    const poopStatus = fields.poopStatus ? `（${fields.poopStatus}）` : ''
+    excretionLines.push(poopCount > 0 ? `ウンチ: ${poopCount}回${poopStatus}` : 'ウンチ: ありませんでした')
     if (fields.soiling === 'true') {
       const place = fields.soilingPlace ? `（場所: ${fields.soilingPlace}）` : ''
       excretionLines.push(`粗相あり${place}`)
@@ -61,6 +57,8 @@ export async function POST(req: NextRequest) {
     if (fields.chkFeedReplace === 'true') careItems.push('ゴハン交換')
     if (fields.chkBrushing === 'true') careItems.push('ブラッシング済み')
     if (fields.chkPlay === 'true') careItems.push('遊び済み')
+    const oyatsuCount = Number(fields.oyatsuCount ?? 0)
+    if (oyatsuCount > 0) careItems.push(`おやつ: ${oyatsuCount}個`)
 
     const lines: string[] = [
       `訪問日時: ${visitDateTime}`,

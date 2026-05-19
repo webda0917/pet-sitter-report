@@ -330,6 +330,11 @@ function BasicCheck({ hasDog, hasCat, fields, setField }: {
       </div>
 
       <div>
+        <p className="text-base font-medium text-gray-700 mb-3">🦴 おやつ</p>
+        <Counter value={Number(fields.oyatsuCount ?? 0)} onChange={(n) => setField('oyatsuCount', String(n))} />
+      </div>
+
+      <div>
         <label className="flex items-center gap-3 cursor-pointer">
           <input type="checkbox" checked={fields.soiling === 'true'} onChange={() => toggle('soiling')}
             className="w-6 h-6 rounded accent-red-500" />
