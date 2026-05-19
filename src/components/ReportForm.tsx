@@ -163,7 +163,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
         </section>
 
         {/* 基本確認 */}
-        {pets.length > 0 && <BasicCheck hasDog={hasDog} hasCat={hasCat} />}
+        {pets.length > 0 && <BasicCheck hasDog={hasDog} hasCat={hasCat} fields={fields} setField={setField} />}
 
         {/* お世話の様子 */}
         {pets.length > 0 && (
@@ -306,99 +306,91 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
   )
 }
 
-function BasicCheck({ hasDog, hasCat }: { hasDog: boolean; hasCat: boolean }) {
+function BasicCheck({ hasDog, hasCat, fields, setField }: {
+  hasDog: boolean
+  hasCat: boolean
+  fields: Record<string, string>
+  setField: (k: string, v: string) => void
+}) {
+  const toggle = (k: string) => setField(k, fields[k] === 'true' ? '' : 'true')
   return (
     <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 space-y-5">
       <h2 className="text-sm font-bold text-gray-700">基本確認</h2>
 
       <div>
         <p className="text-base font-medium text-gray-700 mb-3">🟡 オシッコ</p>
-        <Counter id="pee" />
-        <StatusButtons id="pee-status" options={['普通', '多い', '少ない']} color="blue" />
+        <Counter value={Number(fields.peeCount ?? 0)} onChange={(n) => setField('peeCount', String(n))} />
+        <StatusButtons value={fields.peeStatus ?? ''} onChange={(v) => setField('peeStatus', v)} options={['普通', '多い', '少ない']} color="blue" />
       </div>
 
       <div>
         <p className="text-base font-medium text-gray-700 mb-3">🟤 ウンチ</p>
-        <Counter id="poop" />
-        <StatusButtons id="poop-status" options={['普通', '柔らかい', '硬い', '多い', '少ない']} color="amber" />
+        <Counter value={Number(fields.poopCount ?? 0)} onChange={(n) => setField('poopCount', String(n))} />
+        <StatusButtons value={fields.poopStatus ?? ''} onChange={(v) => setField('poopStatus', v)} options={['普通', '柔らかい', '硬い', '多い', '少ない']} color="amber" />
       </div>
 
-      <SoilingCheck />
+      <div>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input type="checkbox" checked={fields.soiling === 'true'} onChange={() => toggle('soiling')}
+            className="w-6 h-6 rounded accent-red-500" />
+          <span className="text-base font-medium text-gray-700">⚠️ 粗相があった</span>
+        </label>
+        {fields.soiling === 'true' && (
+          <input type="text" value={fields.soilingPlace ?? ''} onChange={(e) => setField('soilingPlace', e.target.value)}
+            placeholder="場所（例：玄関マット）"
+            className="mt-3 w-full border border-gray-300 rounded-xl px-4 py-4 text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        )}
+      </div>
 
       <div className="flex flex-wrap gap-4 pt-3 border-t border-gray-100">
-        {hasDog && <CheckItem id="chk-water-dog" label="💧 お水飲んだ" />}
+        {hasDog && <CheckItem label="💧 お水飲んだ" checked={fields.chkWaterDog === 'true'} onChange={() => toggle('chkWaterDog')} />}
         {hasCat && (
           <>
-            <CheckItem id="chk-toilet" label="🧹 トイレ掃除済み" />
-            <CheckItem id="chk-water-cat" label="💧 お水を交換" />
+            <CheckItem label="🧹 トイレ掃除済み" checked={fields.chkToilet === 'true'} onChange={() => toggle('chkToilet')} />
+            <CheckItem label="💧 お水を交換" checked={fields.chkWaterCat === 'true'} onChange={() => toggle('chkWaterCat')} />
           </>
         )}
-        <CheckItem id="chk-feed-refill" label="🍚 ゴハン補充" />
-        <CheckItem id="chk-feed-replace" label="🍚 ゴハン交換" />
-        <CheckItem id="chk-brushing" label="🪮 ブラッシング" />
-        <CheckItem id="chk-play" label="🎾 遊び" />
+        <CheckItem label="🍚 ゴハン補充" checked={fields.chkFeedRefill === 'true'} onChange={() => toggle('chkFeedRefill')} />
+        <CheckItem label="🍚 ゴハン交換" checked={fields.chkFeedReplace === 'true'} onChange={() => toggle('chkFeedReplace')} />
+        <CheckItem label="🪮 ブラッシング" checked={fields.chkBrushing === 'true'} onChange={() => toggle('chkBrushing')} />
+        <CheckItem label="🎾 遊び" checked={fields.chkPlay === 'true'} onChange={() => toggle('chkPlay')} />
       </div>
     </section>
   )
 }
 
-function Counter({ id }: { id: string }) {
-  const [count, setCount] = useState(0)
+function Counter({ value, onChange }: { value: number; onChange: (n: number) => void }) {
   return (
     <div className="flex items-center gap-3 mb-3">
-      <button onClick={() => setCount((c) => Math.max(0, c - 1))}
+      <button onClick={() => onChange(Math.max(0, value - 1))}
         className="w-11 h-11 rounded-full bg-gray-100 text-gray-700 text-2xl font-medium flex items-center justify-center active:bg-gray-200 select-none">−</button>
-      <span className="text-2xl font-bold text-gray-900 w-10 text-center tabular-nums">{count}</span>
-      <button onClick={() => setCount((c) => c + 1)}
+      <span className="text-2xl font-bold text-gray-900 w-10 text-center tabular-nums">{value}</span>
+      <button onClick={() => onChange(value + 1)}
         className="w-11 h-11 rounded-full bg-emerald-50 text-emerald-700 text-2xl font-medium flex items-center justify-center active:bg-emerald-100 select-none">＋</button>
       <span className="text-sm text-gray-500">回</span>
-      <input type="hidden" id={id} value={count} />
     </div>
   )
 }
 
-function StatusButtons({ id, options, color }: { id: string; options: string[]; color: 'blue' | 'amber' }) {
-  const [selected, setSelected] = useState<string | null>(null)
+function StatusButtons({ value, onChange, options, color }: { value: string; onChange: (v: string) => void; options: string[]; color: 'blue' | 'amber' }) {
   const activeClass = color === 'amber' ? 'bg-amber-600 border-amber-600 text-white' : 'bg-blue-500 border-blue-500 text-white'
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((o) => (
-        <button key={o}
-          onClick={() => setSelected(selected === o ? null : o)}
+        <button key={o} onClick={() => onChange(value === o ? '' : o)}
           className={`px-4 py-2 rounded-full text-sm border transition-colors select-none font-medium ${
-            selected === o ? activeClass : 'border-gray-300 text-gray-600 bg-white'
+            value === o ? activeClass : 'border-gray-300 text-gray-600 bg-white'
           }`}
-        >
-          {o}
-        </button>
+        >{o}</button>
       ))}
-      <input type="hidden" id={id} value={selected ?? ''} />
     </div>
   )
 }
 
-function SoilingCheck() {
-  const [checked, setChecked] = useState(false)
-  return (
-    <div>
-      <label className="flex items-center gap-3 cursor-pointer">
-        <input type="checkbox" id="chk-soiling" checked={checked}
-          onChange={(e) => setChecked(e.target.checked)}
-          className="w-6 h-6 rounded accent-red-500" />
-        <span className="text-base font-medium text-gray-700">⚠️ 粗相があった</span>
-      </label>
-      {checked && (
-        <input type="text" id="soiling-place" placeholder="場所（例：玄関マット）"
-          className="mt-3 w-full border border-gray-300 rounded-xl px-4 py-4 text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
-      )}
-    </div>
-  )
-}
-
-function CheckItem({ id, label }: { id: string; label: string }) {
+function CheckItem({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
   return (
     <label className="flex items-center gap-3 cursor-pointer">
-      <input type="checkbox" id={id} className="w-6 h-6 rounded accent-emerald-600" />
+      <input type="checkbox" checked={checked} onChange={onChange} className="w-6 h-6 rounded accent-emerald-600" />
       <span className="text-base text-gray-700">{label}</span>
     </label>
   )

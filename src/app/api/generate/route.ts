@@ -14,6 +14,7 @@ const SYSTEM_PROMPT = `あなたはペットシッターサービスの報告書
 - 絵文字は最小限に控える（🐶🐱🙏🏻のみ可）。ハート系の絵文字（💕❤️🩷など）は絶対に使わない
 - 「！」を適度に使い明るい雰囲気を出す
 - 自然な文章の流れでつなげる（箇条書きにしない）
+- 排泄・食事・ケアなどの具体的な情報は必ず本文に盛り込む
 - 「次回訪問予定」がある場合は本文の最後に次回訪問の文を入れる
   - 鍵の返却がない場合：「次回は○月○日（曜日）○時ごろお伺い予定です。」
   - 鍵の返却がある場合：「次回は○月○日（曜日）○時ごろ、鍵のお返しもかねてお伺い予定です。」
@@ -34,27 +35,47 @@ export async function POST(req: NextRequest) {
     const petType = hasDog && hasCat ? '犬と猫' : hasDog ? '犬' : '猫'
     const petNames = pets.map((p) => p.name).join('と')
 
-    const labelMap: Record<string, string> = {
-      notes: 'お世話メモ',
-      locked: '施錠・退出',
-      nextStart: '次回訪問開始日時',
-      nextEnd: '次回訪問終了時刻',
-      keyReturn: '鍵の返却',
+    // 排泄情報
+    const peeCount = Number(fields.peeCount ?? 0)
+    const poopCount = Number(fields.poopCount ?? 0)
+    const excretionLines: string[] = []
+    if (peeCount > 0) {
+      const status = fields.peeStatus ? `（${fields.peeStatus}）` : ''
+      excretionLines.push(`オシッコ: ${peeCount}回${status}`)
+    }
+    if (poopCount > 0) {
+      const status = fields.poopStatus ? `（${fields.poopStatus}）` : ''
+      excretionLines.push(`ウンチ: ${poopCount}回${status}`)
+    }
+    if (fields.soiling === 'true') {
+      const place = fields.soilingPlace ? `（場所: ${fields.soilingPlace}）` : ''
+      excretionLines.push(`粗相あり${place}`)
     }
 
-    const fieldLines = Object.entries(fields)
-      .filter(([, v]) => v?.trim())
-      .map(([k, v]) => `${labelMap[k] ?? k}: ${v}`)
-      .join('\n')
+    // チェック済みケア項目
+    const careItems: string[] = []
+    if (fields.chkWaterDog === 'true') careItems.push('お水を飲んだ')
+    if (fields.chkToilet === 'true') careItems.push('トイレ掃除済み')
+    if (fields.chkWaterCat === 'true') careItems.push('お水を交換')
+    if (fields.chkFeedRefill === 'true') careItems.push('ゴハン補充')
+    if (fields.chkFeedReplace === 'true') careItems.push('ゴハン交換')
+    if (fields.chkBrushing === 'true') careItems.push('ブラッシング済み')
+    if (fields.chkPlay === 'true') careItems.push('遊び済み')
 
-    const userPrompt = `以下の情報をもとに報告文を作成してください。
+    const lines: string[] = [
+      `訪問日時: ${visitDateTime}`,
+      `ペット名: ${petNames}`,
+      `種別: ${petType}`,
+    ]
+    if (excretionLines.length > 0) lines.push(`【排泄】\n${excretionLines.join('\n')}`)
+    if (careItems.length > 0) lines.push(`【ケア】\n${careItems.join('\n')}`)
+    if (fields.notes?.trim()) lines.push(`【お世話メモ】\n${fields.notes}`)
+    if (fields.locked === 'true') lines.push('施錠・退出: 済み')
+    if (fields.keyReturn) lines.push(`鍵の返却: ${fields.keyReturn}`)
+    if (fields.nextStart) lines.push(`次回訪問開始: ${fields.nextStart}`)
+    if (fields.nextEnd) lines.push(`次回訪問終了時刻: ${fields.nextEnd}`)
 
-訪問日時: ${visitDateTime}
-ペット名: ${petNames}
-種別: ${petType}
-
-【お世話内容メモ】
-${fieldLines}`
+    const userPrompt = `以下の情報をもとに報告文を作成してください。\n\n${lines.join('\n\n')}`
 
     const message = await client.messages.create({
       model: 'claude-haiku-4-5',
