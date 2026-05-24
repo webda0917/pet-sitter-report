@@ -15,12 +15,29 @@ const SYSTEM_PROMPT = `あなたはペットシッターサービスの報告書
 - 「！」を適度に使い明るい雰囲気を出す
 - 自然な文章の流れでつなげる（箇条書きにしない）
 - 排泄・食事・ケアなどの具体的な情報は必ず本文に盛り込む
-- 「次回訪問予定」がある場合は本文の最後に次回訪問の文を入れる
-  - 鍵の返却がない場合：「次回は○月○日（曜日）○時ごろお伺い予定です。」
-  - 鍵の返却がある場合：「次回は○月○日（曜日）○時ごろ、鍵のお返しもかねてお伺い予定です。」
-- 締め文は必ず「本日もありがとうございました🙏🏻\n\nまたご依頼ございましたらお知らせくださいませ🙏🏻」
+- 施錠・退出の記録がある場合は「しっかりと施錠の上、退出いたしました」などの文を本文に自然に含める
+- 次回訪問予定がある場合：
+  - 本文の最後（締め文の前）に次回訪問の文を入れる
+  - 鍵の返却なし：「次回は○月○日（曜日）○時ごろお伺い予定です。」
+  - 鍵の返却あり：「次回は○月○日（曜日）○時ごろ、鍵のお返しもかねてお伺い予定です。」
+  - 締め文は「本日もありがとうございました🙏🏻」のみ（「またご依頼ございましたら〜」は書かない）
+- 次回訪問予定がない場合：
+  - 締め文は「本日もありがとうございました🙏🏻\n\nまたご依頼ございましたらお知らせくださいませ🙏🏻」
 - 500〜700文字程度が目安
 - 空の項目は省略する`
+
+function formatNextVisit(start: string, end?: string): string {
+  const d = new Date(start)
+  if (isNaN(d.getTime())) return start
+  const days = ['日', '月', '火', '水', '木', '金', '土']
+  const mo = d.getMonth() + 1
+  const day = d.getDate()
+  const wd = days[d.getDay()]
+  const h = d.getHours()
+  const min = d.getMinutes().toString().padStart(2, '0')
+  const timeStr = `${h}:${min}`
+  return end ? `${mo}月${day}日（${wd}）${timeStr}〜${end}` : `${mo}月${day}日（${wd}）${timeStr}`
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,18 +77,28 @@ export async function POST(req: NextRequest) {
     const oyatsuCount = Number(fields.oyatsuCount ?? 0)
     if (oyatsuCount > 0) careItems.push(`おやつ: ${oyatsuCount}個`)
 
+    // 次回訪問
+    const hasNextVisit = !!fields.nextStart
+    const nextVisitStr = hasNextVisit
+      ? formatNextVisit(fields.nextStart, fields.nextEnd || undefined)
+      : null
+
     const lines: string[] = [
       `訪問日時: ${visitDateTime}`,
       `ペット名: ${petNames}`,
       `種別: ${petType}`,
     ]
-    if (excretionLines.length > 0) lines.push(`【排泄】\n${excretionLines.join('\n')}`)
+    lines.push(`【排泄】\n${excretionLines.join('\n')}`)
     if (careItems.length > 0) lines.push(`【ケア】\n${careItems.join('\n')}`)
     if (fields.notes?.trim()) lines.push(`【お世話メモ】\n${fields.notes}`)
-    if (fields.locked === 'true') lines.push('施錠・退出: 済み')
+    if (fields.locked === 'true') lines.push('施錠・退出: 完了')
     if (fields.keyReturn) lines.push(`鍵の返却: ${fields.keyReturn}`)
-    if (fields.nextStart) lines.push(`次回訪問開始: ${fields.nextStart}`)
-    if (fields.nextEnd) lines.push(`次回訪問終了時刻: ${fields.nextEnd}`)
+    if (nextVisitStr) {
+      lines.push(`次回訪問予定: ${nextVisitStr}`)
+      lines.push('次回訪問予定: あり（締め文は「本日もありがとうございました🙏🏻」のみにすること）')
+    } else {
+      lines.push('次回訪問予定: なし')
+    }
 
     const userPrompt = `以下の情報をもとに報告文を作成してください。\n\n${lines.join('\n\n')}`
 
