@@ -31,12 +31,12 @@ export default function ClientManager({ onBack }: Props) {
 
   useEffect(() => { reload() }, [reload])
 
-  const handleSaveClient = async (name: string) => {
+  const handleSaveClient = async (name: string, reportExample: string) => {
     if (!name.trim()) return
     if (editingClient) {
-      await updateClient(editingClient.id, name)
+      await updateClient(editingClient.id, name, reportExample)
     } else {
-      await addClient(name)
+      await addClient(name, reportExample)
     }
     setEditingClient(null)
     setShowClientForm(false)
@@ -152,7 +152,8 @@ export default function ClientManager({ onBack }: Props) {
           onClose={() => { setShowClientForm(false); setEditingClient(null) }}
         >
           <ClientForm
-            initial={editingClient?.name ?? ''}
+            initialName={editingClient?.name ?? ''}
+            initialExample={editingClient?.reportExample ?? ''}
             onSave={handleSaveClient}
             onCancel={() => { setShowClientForm(false); setEditingClient(null) }}
           />
@@ -178,7 +179,7 @@ export default function ClientManager({ onBack }: Props) {
 function FormModal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md p-6">
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-bold text-gray-900">{title}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -193,20 +194,36 @@ function FormModal({ title, children, onClose }: { title: string; children: Reac
   )
 }
 
-function ClientForm({ initial, onSave, onCancel }: { initial: string; onSave: (name: string) => void; onCancel: () => void }) {
-  const [name, setName] = useState(initial)
+function ClientForm({ initialName, initialExample, onSave, onCancel }: {
+  initialName: string
+  initialExample: string
+  onSave: (name: string, reportExample: string) => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState(initialName)
+  const [example, setExample] = useState(initialExample)
   return (
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">お客様名</label>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="例：田中様"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          onKeyDown={(e) => e.key === 'Enter' && onSave(name)}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">報告書の参考例文（任意）</label>
+        <p className="text-xs text-gray-400 mb-2">過去に送った報告書をそのまま貼り付けてください。複数ある場合は続けて貼り付けてOKです。AIがこのお客様の文体・書き方を参考にします。</p>
+        <textarea
+          value={example}
+          onChange={(e) => setExample(e.target.value)}
+          rows={8}
+          placeholder={'例：\n5/1（木）12:00-13:00\n===\n本日のお世話の様子です！\nポポちゃんは元気いっぱいで…'}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
         />
       </div>
       <div className="flex gap-3">
         <button onClick={onCancel} className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium">キャンセル</button>
-        <button onClick={() => onSave(name)} disabled={!name.trim()} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">保存</button>
+        <button onClick={() => onSave(name, example)} disabled={!name.trim()} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">保存</button>
       </div>
     </div>
   )

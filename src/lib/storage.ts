@@ -5,25 +5,31 @@ import type { Client, Pet, PetType } from '@/types'
 export async function getClients(): Promise<Client[]> {
   const { data, error } = await getSupabase()
     .from('clients')
-    .select('id, name, pets(id, name, type, notes)')
+    .select('id, name, report_example, pets(id, name, type, notes)')
     .order('created_at', { ascending: true })
   if (error) throw error
-  return (data ?? []) as Client[]
+  return (data ?? []).map((row: Record<string, unknown>) => ({
+    id: row.id as string,
+    name: row.name as string,
+    reportExample: (row.report_example as string) ?? '',
+    pets: (row.pets as Client['pets']) ?? [],
+  }))
 }
 
 // ─── 顧客 CRUD ────────────────────────────────────────────
-export async function addClient(name: string): Promise<Client> {
+export async function addClient(name: string, reportExample?: string): Promise<Client> {
   const { data, error } = await getSupabase()
     .from('clients')
-    .insert({ name })
+    .insert({ name, report_example: reportExample ?? '' })
     .select()
     .single()
   if (error) throw error
-  return { ...data, pets: [] }
+  const row = data as Record<string, unknown>
+  return { id: row.id as string, name: row.name as string, reportExample: (row.report_example as string) ?? '', pets: [] }
 }
 
-export async function updateClient(id: string, name: string): Promise<void> {
-  const { error } = await getSupabase().from('clients').update({ name }).eq('id', id)
+export async function updateClient(id: string, name: string, reportExample?: string): Promise<void> {
+  const { error } = await getSupabase().from('clients').update({ name, report_example: reportExample ?? '' }).eq('id', id)
   if (error) throw error
 }
 

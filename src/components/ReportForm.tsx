@@ -79,6 +79,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
           pets: pets.map((p) => ({ name: p.name, type: p.type })),
           visitDateTime,
           fields,
+          reportExample: selectedClient.reportExample ?? '',
         }),
       })
       const data = await res.json()

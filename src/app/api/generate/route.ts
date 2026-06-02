@@ -41,10 +41,11 @@ function formatNextVisit(start: string, end?: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { pets, visitDateTime, fields } = (await req.json()) as {
+    const { pets, visitDateTime, fields, reportExample } = (await req.json()) as {
       pets: { name: string; type: 'dog' | 'cat' }[]
       visitDateTime: string
       fields: Record<string, string>
+      reportExample?: string
     }
 
     const hasDog = pets.some((p) => p.type === 'dog')
@@ -100,7 +101,11 @@ export async function POST(req: NextRequest) {
       lines.push('次回訪問予定: なし')
     }
 
-    const userPrompt = `以下の情報をもとに報告文を作成してください。\n\n${lines.join('\n\n')}`
+    const exampleSection = reportExample?.trim()
+      ? `【このお客様への過去の報告書（参考例文）】\n以下の例文を参考に、同じ文体・表現のトーンで作成してください。\n\n${reportExample.trim()}\n\n---\n\n`
+      : ''
+
+    const userPrompt = `${exampleSection}以下の情報をもとに報告文を作成してください。\n\n${lines.join('\n\n')}`
 
     const message = await client.messages.create({
       model: 'claude-haiku-4-5',

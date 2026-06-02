@@ -11,6 +11,7 @@ export interface Client {
   id: string
   name: string
   pets: Pet[]
+  reportExample?: string
 }
 
 export interface DogFormFields {
