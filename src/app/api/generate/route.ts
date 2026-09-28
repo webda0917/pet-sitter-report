@@ -1,6 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 
+// Opus は Haiku より応答に時間がかかるため、Vercel の関数タイムアウトを延ばす
+export const maxDuration = 60
+
 const client = new Anthropic()
 
 const SYSTEM_PROMPT = `あなたはペットシッターサービスの報告書作成アシスタントです。
@@ -10,6 +13,12 @@ const SYSTEM_PROMPT = `あなたはペットシッターサービスの報告書
 - ヘッダー行：「M/D（曜日）HH:MM-HH:MM」形式を1行目に、次の行に「===」
 - 3行目から本文を「本日のお世話の様子です！」で開始
 - 敬体（です・ます調）で書く
+- 尊敬語はお客様（飼い主様）に対してだけ使う。ペットの動作に尊敬語は使わない
+  - NG：「飲まれていました」「歩かれた」「召し上がっていました」「お休みになっていました」
+  - OK：「飲んでいました」「たくさん歩きました」「完食してくれました」「寝ていました」
+- 文末に「〜よ！」「〜よ」をつけない。お客様に教えてあげるような口調になり失礼にあたる
+  - NG：「気持ちよさそうにしていましたよ！」「喜んでくれましたよ！」「元気でしたよ」
+  - OK：「気持ちよさそうにしていました！」「喜んでくれました！」「元気いっぱいでした」
 - ペットの名前には必ず「ちゃん」をつけて呼ぶ（例：「ポポちゃん」「ミミちゃん」）。絶対に呼び捨てにしない
 - 絵文字は最小限に控える（🐶🐱🙏🏻のみ可）。ハート系の絵文字（💕❤️🩷など）は絶対に使わない
 - 「！」を適度に使い明るい雰囲気を出す
@@ -107,19 +116,31 @@ export async function POST(req: NextRequest) {
 
     const userPrompt = `${exampleSection}以下の情報をもとに報告文を作成してください。\n\n${lines.join('\n\n')}`
 
+    // Opus 5.5 は思考が常に有効。思考分も max_tokens を消費するため余裕を持たせる
     const message = await client.messages.create({
-      model: 'claude-haiku-4-5',
-      max_tokens: 1024,
+      model: 'claude-opus-5-5',
+      max_tokens: 16000,
+      output_config: { effort: 'low' },
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
     })
 
-    const content = message.content[0]
-    if (content.type !== 'text') {
+    if (message.stop_reason === 'refusal' || message.stop_reason === 'max_tokens') {
+      console.error('Generate API stop_reason:', message.stop_reason)
+      return NextResponse.json({ error: '報告文の生成に失敗しました' }, { status: 500 })
+    }
+
+    // 先頭に thinking ブロックが来るため、text ブロックだけを取り出す
+    const report = message.content
+      .filter((b) => b.type === 'text')
+      .map((b) => b.text)
+      .join('')
+      .trim()
+    if (!report) {
       return NextResponse.json({ error: 'Unexpected response type' }, { status: 500 })
     }
 
-    return NextResponse.json({ report: content.text })
+    return NextResponse.json({ report })
   } catch (error) {
     console.error('Generate API error:', error)
     return NextResponse.json({ error: '報告文の生成に失敗しました' }, { status: 500 })
