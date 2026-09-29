@@ -7,6 +7,7 @@ import {
   getDefaultStartDatetime,
   getDefaultEndTime,
 } from '@/lib/storage'
+import ClientSearch from './ClientSearch'
 
 interface Props {
   clients: Client[]
@@ -114,21 +115,11 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
         {/* 顧客選択 */}
         <section className={sectionClass}>
           <h2 className={sectionTitle}>お客様・ペット</h2>
-          <select
-            value={selectedClientId}
-            onChange={(e) => setSelectedClientId(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">お客様を選択してください</option>
-            {clients.filter((c) => c.pets.length > 0).map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-          {pets.length > 0 && (
-            <p className="text-sm text-gray-600">
-              対象ペット：{pets.map((p) => `${p.type === 'dog' ? '🐶' : '🐱'} ${p.name}`).join('　')}
-            </p>
-          )}
+          <ClientSearch
+            clients={clients.filter((c) => c.pets.length > 0)}
+            selectedClientId={selectedClientId}
+            onSelect={setSelectedClientId}
+          />
         </section>
 
         {/* 訪問日時 */}
