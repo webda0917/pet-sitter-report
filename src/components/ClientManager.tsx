@@ -31,12 +31,12 @@ export default function ClientManager({ onBack }: Props) {
 
   useEffect(() => { reload() }, [reload])
 
-  const handleSaveClient = async (name: string, reportExample: string) => {
+  const handleSaveClient = async (name: string, reportExample: string, furigana: string) => {
     if (!name.trim()) return
     if (editingClient) {
-      await updateClient(editingClient.id, name, reportExample)
+      await updateClient(editingClient.id, name, reportExample, furigana)
     } else {
-      await addClient(name, reportExample)
+      await addClient(name, reportExample, furigana)
     }
     setEditingClient(null)
     setShowClientForm(false)
@@ -95,7 +95,10 @@ export default function ClientManager({ onBack }: Props) {
         {clients.map((client) => (
           <div key={client.id} className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="px-4 py-3 flex items-center justify-between">
-              <span className="font-semibold text-gray-900">{client.name}</span>
+              <div className="min-w-0">
+                {client.furigana && <p className="text-xs text-gray-400">{client.furigana}</p>}
+                <p className="font-semibold text-gray-900">{client.name}</p>
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => { setEditingClient(client); setShowClientForm(true) }}
@@ -153,6 +156,7 @@ export default function ClientManager({ onBack }: Props) {
         >
           <ClientForm
             initialName={editingClient?.name ?? ''}
+            initialFurigana={editingClient?.furigana ?? ''}
             initialExample={editingClient?.reportExample ?? ''}
             onSave={handleSaveClient}
             onCancel={() => { setShowClientForm(false); setEditingClient(null) }}
@@ -194,19 +198,27 @@ function FormModal({ title, children, onClose }: { title: string; children: Reac
   )
 }
 
-function ClientForm({ initialName, initialExample, onSave, onCancel }: {
+function ClientForm({ initialName, initialFurigana, initialExample, onSave, onCancel }: {
   initialName: string
+  initialFurigana: string
   initialExample: string
-  onSave: (name: string, reportExample: string) => void
+  onSave: (name: string, reportExample: string, furigana: string) => void
   onCancel: () => void
 }) {
   const [name, setName] = useState(initialName)
+  const [furigana, setFurigana] = useState(initialFurigana)
   const [example, setExample] = useState(initialExample)
   return (
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">お客様名</label>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="例：田中様"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">ふりがな</label>
+        <input type="text" value={furigana} onChange={(e) => setFurigana(e.target.value)} placeholder="例：たなか"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
@@ -223,7 +235,7 @@ function ClientForm({ initialName, initialExample, onSave, onCancel }: {
       </div>
       <div className="flex gap-3">
         <button onClick={onCancel} className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium">キャンセル</button>
-        <button onClick={() => onSave(name, example)} disabled={!name.trim()} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">保存</button>
+        <button onClick={() => onSave(name, example, furigana)} disabled={!name.trim()} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">保存</button>
       </div>
     </div>
   )

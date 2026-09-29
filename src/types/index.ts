@@ -10,6 +10,7 @@ export interface Pet {
 export interface Client {
   id: string
   name: string
+  furigana?: string
   pets: Pet[]
   reportExample?: string
 }

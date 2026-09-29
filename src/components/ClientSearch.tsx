@@ -27,12 +27,12 @@ export default function ClientSearch({ clients, selectedClientId, onSelect }: Pr
 
   const selectedClient = clients.find((c) => c.id === selectedClientId)
 
-  // 顧客名・ペット名のどちらでもヒットさせる
+  // 顧客名・ふりがな・ペット名のどれでもヒットさせる
   const matches = useMemo(() => {
     const q = normalize(query)
     if (!q) return clients
     return clients.filter((c) =>
-      [c.name, ...c.pets.map((p) => p.name)].some((name) => normalize(name).includes(q)),
+      [c.name, c.furigana ?? '', ...c.pets.map((p) => p.name)].some((name) => normalize(name).includes(q)),
     )
   }, [clients, query])
 
@@ -84,7 +84,7 @@ export default function ClientSearch({ clients, selectedClientId, onSelect }: Pr
           value={query}
           onChange={(e) => { setQuery(e.target.value); setIsOpen(true) }}
           onFocus={() => setIsOpen(true)}
-          placeholder="お客様名・ペット名で検索"
+          placeholder="お客様名・ふりがな・ペット名で検索"
           autoComplete="off"
           autoFocus={!!selectedClient}
           enterKeyHint="search"
