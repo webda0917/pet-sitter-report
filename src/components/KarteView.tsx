@@ -47,7 +47,11 @@ function formatDate(iso: string | null | undefined): string {
 export default function KarteView({ client, onClose, onSaved }: Props) {
   const [karte, setKarte] = useState<Karte>(client.karte ?? {})
   const [updatedAt, setUpdatedAt] = useState<string | null>(client.karteUpdatedAt ?? null)
-  const [draft, setDraft] = useState<Karte | null>(null)
+  // 未記入のカルテは、最初から記入欄（編集モード）で開く
+  const [draft, setDraft] = useState<Karte | null>(() =>
+    Object.values(client.karte ?? {}).some((v) => v.trim()) ? null : {},
+  )
+  const [focusKey, setFocusKey] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const [notice, setNotice] = useState('')
@@ -57,15 +61,15 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
   const petTypes = useMemo(() => Array.from(new Set(client.pets.map((p) => p.type))) as PetType[], [client.pets])
   const sections = useMemo(() => getVisibleSections(petTypes), [petTypes])
   const isEditing = draft !== null
-  const isEmpty = sections.every((s) => !karte[s.key]?.trim())
-
-  const startEdit = () => { setDraft({ ...karte }); setNotice(''); setError('') }
+  const startEdit = (key?: string) => { setDraft({ ...karte }); setFocusKey(key ?? null); setNotice(''); setError('') }
 
   const cancelEdit = () => {
     if (JSON.stringify(draft) !== JSON.stringify(karte) && !confirm('編集中の内容を破棄してよいですか？')) return
     setDraft(null)
+    setFocusKey(null)
     setNotice('')
     setError('')
+    if (!Object.values(karte).some((v) => v.trim())) onClose()
   }
 
   const handleSave = async () => {
@@ -146,7 +150,7 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
             {isSaving ? '保存中…' : '保存'}
           </button>
         ) : (
-          <button onClick={startEdit} className="border border-gray-300 bg-white text-gray-700 text-sm px-4 py-2 rounded-lg font-medium">
+          <button onClick={() => startEdit()} className="border border-gray-300 bg-white text-gray-700 text-sm px-4 py-2 rounded-lg font-medium">
             編集
           </button>
         )}
@@ -184,7 +188,7 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
           )}
         </button>
         <p className="text-xs text-gray-500 -mt-2">
-          記入済みのヒアリングシートやメモの写真を選ぶと、内容を読み取って各項目に入れます（1回{MAX_IMAGES}枚まで）。写真は保存されません。
+          記入済みのヒアリングシートやメモの写真を選ぶと、内容を読み取って下の各項目に入れます（1回{MAX_IMAGES}枚まで）。写真は保存されません。写真がなくても、下の項目に直接記入できます。
         </p>
 
         {notice && (
@@ -194,20 +198,22 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
           <div className="bg-red-50 border border-red-300 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>
         )}
 
-        {!isEditing && isEmpty && (
-          <p className="text-center text-gray-400 py-8 text-sm">
-            まだ記入されていません。<br />「編集」か「写真から読み取る」で記入してください。
-          </p>
-        )}
-
         {sections.map((s) => {
           const value = (draft ? draft[s.key] : karte[s.key]) ?? ''
           if (!draft) {
-            if (!value.trim()) return null
             return (
               <section key={s.key} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
-                <h2 className="text-sm font-bold text-emerald-700 mb-2">{s.label}</h2>
-                <p className="text-base text-gray-800 leading-relaxed whitespace-pre-wrap break-words">{value}</p>
+                <div className="flex items-center justify-between mb-2">
+                  <h2 className="text-sm font-bold text-emerald-700">{s.label}</h2>
+                  <button type="button" onClick={() => startEdit(s.key)} className="text-sm text-gray-500 underline">
+                    {value.trim() ? '編集' : '記入する'}
+                  </button>
+                </div>
+                {value.trim() ? (
+                  <p className="text-base text-gray-800 leading-relaxed whitespace-pre-wrap break-words">{value}</p>
+                ) : (
+                  <p className="text-sm text-gray-400">未記入</p>
+                )}
               </section>
             )
           }
@@ -229,6 +235,7 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
                 value={value}
                 onChange={(v) => setDraft({ ...draft, [s.key]: v })}
                 placeholder={s.guide}
+                autoFocus={focusKey === s.key}
               />
             </section>
           )
@@ -254,7 +261,7 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
 }
 
 // 内容の行数（折り返しを含む）に合わせて高さが伸びる記入欄
-function AutoTextarea({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
+function AutoTextarea({ value, onChange, placeholder, autoFocus }: { value: string; onChange: (v: string) => void; placeholder: string; autoFocus?: boolean }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   useLayoutEffect(() => {
     const el = ref.current
@@ -269,6 +276,7 @@ function AutoTextarea({ value, onChange, placeholder }: { value: string; onChang
       onChange={(e) => onChange(e.target.value)}
       rows={4}
       placeholder={placeholder}
+      autoFocus={autoFocus}
       className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-800 leading-relaxed bg-gray-50 resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-500"
     />
   )
