@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import type { Client } from '@/types'
+import type { Client, Karte } from '@/types'
 import {
   formatVisitDateTime,
   getDefaultStartDatetime,
   getDefaultEndTime,
 } from '@/lib/storage'
 import ClientSearch from './ClientSearch'
+import KarteView from './KarteView'
 
 interface Props {
   clients: Client[]
@@ -25,6 +26,9 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
   const [isRecording, setIsRecording] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(false)
   const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const [showKarte, setShowKarte] = useState(false)
+  // この画面を開いたあとにカルテを保存した場合の最新内容（clients は親から渡された時点のまま）
+  const [karteOverrides, setKarteOverrides] = useState<Record<string, { karte: Karte; updatedAt: string | null }>>({})
 
   useEffect(() => {
     const SR = window.SpeechRecognition ?? (window as Window & { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition
@@ -110,6 +114,18 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
         <span className="text-base font-bold text-gray-700">報告書を作成</span>
       </header>
 
+      {showKarte && selectedClient && (
+        <KarteView
+          client={{
+            ...selectedClient,
+            karte: karteOverrides[selectedClient.id]?.karte ?? selectedClient.karte,
+            karteUpdatedAt: karteOverrides[selectedClient.id]?.updatedAt ?? selectedClient.karteUpdatedAt,
+          }}
+          onClose={() => setShowKarte(false)}
+          onSaved={(karte, updatedAt) => setKarteOverrides((prev) => ({ ...prev, [selectedClient.id]: { karte, updatedAt } }))}
+        />
+      )}
+
       <div className="p-4 space-y-4 max-w-lg mx-auto pb-10 overflow-x-hidden">
 
         {/* 顧客選択 */}
@@ -120,6 +136,18 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
             selectedClientId={selectedClientId}
             onSelect={setSelectedClientId}
           />
+          {selectedClient && (
+            <button
+              type="button"
+              onClick={() => setShowKarte(true)}
+              className="w-full border border-gray-300 bg-white text-gray-700 py-3 rounded-xl text-sm font-medium active:bg-gray-50 flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              カルテを見る
+            </button>
+          )}
         </section>
 
         {/* 訪問日時 */}

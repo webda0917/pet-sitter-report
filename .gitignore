@@ -16,3 +16,7 @@ out/
 
 # デバッグ
 npm-debug.log*
+
+# ヒアリングシート（顧客情報を含みうるため公開リポジトリに上げない）
+hearing-sheets/
+tsconfig.tsbuildinfo

@@ -7,11 +7,16 @@ export interface Pet {
   notes?: string
 }
 
+// お世話カルテ：セクションのキー → 本文
+export type Karte = Record<string, string>
+
 export interface Client {
   id: string
   name: string
   furigana?: string
   pets: Pet[]
+  karte?: Karte
+  karteUpdatedAt?: string | null
   reportExample?: string
 }
 

@@ -1,63 +1,69 @@
-import { getSupabase } from './supabase'
-import type { Client, Pet, PetType } from '@/types'
+import type { Client, Karte, Pet, PetType } from '@/types'
+
+// データの読み書きはすべて自前のAPI経由（ブラウザから Supabase には直接つながない）
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, {
+    ...init,
+    headers: init?.body ? { 'Content-Type': 'application/json' } : undefined,
+  })
+  if (res.status === 401) {
+    window.location.href = '/login'
+    throw new Error('ログインが必要です')
+  }
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error ?? '通信に失敗しました')
+  return data as T
+}
 
 // ─── 顧客・ペット取得 ─────────────────────────────────────
-export async function getClients(): Promise<Client[]> {
-  const { data, error } = await getSupabase()
-    .from('clients')
-    .select('id, name, furigana, report_example, pets(id, name, type, notes)')
-    .order('created_at', { ascending: true })
-  if (error) throw error
-  return (data ?? []).map((row: Record<string, unknown>) => ({
-    id: row.id as string,
-    name: row.name as string,
-    furigana: (row.furigana as string) ?? '',
-    reportExample: (row.report_example as string) ?? '',
-    pets: (row.pets as Client['pets']) ?? [],
-  }))
+export function getClients(): Promise<Client[]> {
+  return api<Client[]>('/api/clients')
 }
 
 // ─── 顧客 CRUD ────────────────────────────────────────────
-export async function addClient(name: string, reportExample?: string, furigana?: string): Promise<Client> {
-  const { data, error } = await getSupabase()
-    .from('clients')
-    .insert({ name, furigana: furigana ?? '', report_example: reportExample ?? '' })
-    .select()
-    .single()
-  if (error) throw error
-  const row = data as Record<string, unknown>
-  return { id: row.id as string, name: row.name as string, furigana: (row.furigana as string) ?? '', reportExample: (row.report_example as string) ?? '', pets: [] }
+export function addClient(name: string, reportExample?: string, furigana?: string): Promise<Client> {
+  return api<Client>('/api/clients', { method: 'POST', body: JSON.stringify({ name, reportExample, furigana }) })
 }
 
 export async function updateClient(id: string, name: string, reportExample?: string, furigana?: string): Promise<void> {
-  const { error } = await getSupabase().from('clients').update({ name, furigana: furigana ?? '', report_example: reportExample ?? '' }).eq('id', id)
-  if (error) throw error
+  await api(`/api/clients/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ name, reportExample: reportExample ?? '', furigana: furigana ?? '' }),
+  })
 }
 
 export async function deleteClient(id: string): Promise<void> {
-  const { error } = await getSupabase().from('clients').delete().eq('id', id)
-  if (error) throw error
+  await api(`/api/clients/${id}`, { method: 'DELETE' })
+}
+
+// ─── カルテ ───────────────────────────────────────────────
+export async function saveKarte(clientId: string, karte: Karte): Promise<string | null> {
+  const res = await api<{ karteUpdatedAt: string | null }>(`/api/clients/${clientId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ karte }),
+  })
+  return res.karteUpdatedAt
+}
+
+export async function extractKarte(images: string[], petTypes: PetType[]): Promise<Karte> {
+  const res = await api<{ karte: Karte }>('/api/karte/extract', {
+    method: 'POST',
+    body: JSON.stringify({ images, petTypes }),
+  })
+  return res.karte
 }
 
 // ─── ペット CRUD ──────────────────────────────────────────
-export async function addPet(clientId: string, name: string, type: PetType, notes: string): Promise<Pet> {
-  const { data, error } = await getSupabase()
-    .from('pets')
-    .insert({ client_id: clientId, name, type, notes })
-    .select()
-    .single()
-  if (error) throw error
-  return data as Pet
+export function addPet(clientId: string, name: string, type: PetType, notes: string): Promise<Pet> {
+  return api<Pet>('/api/pets', { method: 'POST', body: JSON.stringify({ clientId, name, type, notes }) })
 }
 
 export async function updatePet(id: string, name: string, type: PetType, notes: string): Promise<void> {
-  const { error } = await getSupabase().from('pets').update({ name, type, notes }).eq('id', id)
-  if (error) throw error
+  await api(`/api/pets/${id}`, { method: 'PATCH', body: JSON.stringify({ name, type, notes }) })
 }
 
 export async function deletePet(id: string): Promise<void> {
-  const { error } = await getSupabase().from('pets').delete().eq('id', id)
-  if (error) throw error
+  await api(`/api/pets/${id}`, { method: 'DELETE' })
 }
 
 // ─── 日時ユーティリティ ───────────────────────────────────

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import type { Client, Pet, PetType } from '@/types'
+import KarteView from './KarteView'
 import {
   getClients,
   addClient,
@@ -23,6 +24,7 @@ export default function ClientManager({ onBack }: Props) {
   const [showClientForm, setShowClientForm] = useState(false)
   const [editingPet, setEditingPet] = useState<{ clientId: string; pet: Pet } | null>(null)
   const [showPetForm, setShowPetForm] = useState<string | null>(null)
+  const [karteClient, setKarteClient] = useState<Client | null>(null)
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -99,7 +101,13 @@ export default function ClientManager({ onBack }: Props) {
                 {client.furigana && <p className="text-xs text-gray-400">{client.furigana}</p>}
                 <p className="font-semibold text-gray-900">{client.name}</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => setKarteClient(client)}
+                  className="text-xs text-emerald-700 px-2 py-1 rounded border border-emerald-300 bg-emerald-50 font-medium"
+                >
+                  カルテ
+                </button>
                 <button
                   onClick={() => { setEditingClient(client); setShowClientForm(true) }}
                   className="text-xs text-blue-600 px-2 py-1 rounded border border-blue-200"
@@ -162,6 +170,10 @@ export default function ClientManager({ onBack }: Props) {
             onCancel={() => { setShowClientForm(false); setEditingClient(null) }}
           />
         </FormModal>
+      )}
+
+      {karteClient && (
+        <KarteView client={karteClient} onClose={() => { setKarteClient(null); reload() }} />
       )}
 
       {showPetForm && (
