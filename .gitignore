@@ -20,3 +20,6 @@ npm-debug.log*
 # ヒアリングシート（顧客情報を含みうるため公開リポジトリに上げない）
 hearing-sheets/
 tsconfig.tsbuildinfo
+
+# 引き継ぎメモ（セキュリティ上の状態を含むため公開しない）
+HANDOFF.md
