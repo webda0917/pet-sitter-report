@@ -406,18 +406,7 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
       </div>
 
       {/* 添付画像の拡大表示 */}
-      {viewing && (
-        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setViewing(null)}>
-          <img src={karteImageUrl(viewing)} alt="" className="max-w-full max-h-full object-contain" />
-          <button
-            type="button"
-            onClick={() => setViewing(null)}
-            className="absolute top-4 right-4 bg-white/90 text-gray-800 text-sm px-4 py-2 rounded-lg font-bold"
-          >
-            閉じる
-          </button>
-        </div>
-      )}
+      {viewing && <ImageViewer src={karteImageUrl(viewing)} onClose={() => setViewing(null)} />}
     </div>
   )
 }
@@ -441,5 +430,129 @@ function AutoTextarea({ value, onChange, placeholder, autoFocus }: { value: stri
       autoFocus={autoFocus}
       className="w-full border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-800 leading-relaxed bg-gray-50 resize-none overflow-hidden focus:outline-none focus:ring-2 focus:ring-emerald-500"
     />
+  )
+}
+
+// 添付画像の拡大表示。アプリ全体はピンチ拡大を止めているので、ここだけ指の操作で拡大・移動できるようにする
+// 2本指で拡大・縮小、拡大中は1本指で移動、ダブルタップで 2.5倍 ⇔ 等倍
+const MAX_ZOOM = 5
+const DOUBLE_TAP_ZOOM = 2.5
+
+function ImageViewer({ src, onClose }: { src: string; onClose: () => void }) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
+  // 画面中央を原点にした、拡大率と移動量
+  const view = useRef({ s: 1, x: 0, y: 0 })
+  const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const gesture = useRef<{ s: number; x: number; y: number; mx: number; my: number; dist: number } | null>(null)
+  const lastTap = useRef({ t: 0, x: 0, y: 0 })
+  const moved = useRef(false)
+
+  const apply = (s: number, x: number, y: number, animate = false) => {
+    const img = imgRef.current
+    if (!img) return
+    s = Math.min(MAX_ZOOM, Math.max(1, s))
+    // 画像の外側が見えすぎないよう、移動できる範囲を拡大率に合わせて制限する
+    const maxX = ((s - 1) * img.offsetWidth) / 2
+    const maxY = ((s - 1) * img.offsetHeight) / 2
+    x = Math.min(maxX, Math.max(-maxX, x))
+    y = Math.min(maxY, Math.max(-maxY, y))
+    view.current = { s, x, y }
+    img.style.transition = animate ? 'transform 0.2s ease-out' : 'none'
+    img.style.transform = `translate(${x}px, ${y}px) scale(${s})`
+  }
+
+  // 画面中央を原点にした座標
+  const local = (clientX: number, clientY: number) => {
+    const r = boxRef.current!.getBoundingClientRect()
+    return { x: clientX - r.left - r.width / 2, y: clientY - r.top - r.height / 2 }
+  }
+
+  const startGesture = () => {
+    const pts = Array.from(pointers.current.values())
+    const mx = pts.reduce((n, p) => n + p.x, 0) / pts.length
+    const my = pts.reduce((n, p) => n + p.y, 0) / pts.length
+    const dist = pts.length > 1 ? Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y) : 0
+    gesture.current = { ...view.current, mx, my, dist }
+  }
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    pointers.current.set(e.pointerId, local(e.clientX, e.clientY))
+    if (pointers.current.size === 1) moved.current = false
+    startGesture()
+  }
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!pointers.current.has(e.pointerId) || !gesture.current) return
+    pointers.current.set(e.pointerId, local(e.clientX, e.clientY))
+    const g = gesture.current
+    const pts = Array.from(pointers.current.values())
+    const mx = pts.reduce((n, p) => n + p.x, 0) / pts.length
+    const my = pts.reduce((n, p) => n + p.y, 0) / pts.length
+    if (Math.hypot(mx - g.mx, my - g.my) > 8) moved.current = true
+
+    if (pts.length > 1 && g.dist > 0) {
+      moved.current = true
+      const s = Math.min(MAX_ZOOM, Math.max(1, (g.s * Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)) / g.dist))
+      // 指のあいだにある画像上の点が、指について動くようにする
+      const qx = (g.mx - g.x) / g.s
+      const qy = (g.my - g.y) / g.s
+      apply(s, mx - s * qx, my - s * qy)
+    } else if (view.current.s > 1) {
+      apply(g.s, g.x + (mx - g.mx), g.y + (my - g.my))
+    }
+  }
+
+  const onPointerUp = (e: React.PointerEvent) => {
+    const p = pointers.current.get(e.pointerId)
+    pointers.current.delete(e.pointerId)
+    if (pointers.current.size > 0) { startGesture(); return }
+    gesture.current = null
+    if (!p || moved.current) return
+
+    // ダブルタップ
+    const now = Date.now()
+    const last = lastTap.current
+    if (now - last.t < 300 && Math.hypot(p.x - last.x, p.y - last.y) < 30) {
+      lastTap.current = { t: 0, x: 0, y: 0 }
+      if (view.current.s > 1) apply(1, 0, 0, true)
+      else apply(DOUBLE_TAP_ZOOM, p.x * (1 - DOUBLE_TAP_ZOOM), p.y * (1 - DOUBLE_TAP_ZOOM), true)
+    } else {
+      lastTap.current = { t: now, ...p }
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black">
+      <div
+        ref={boxRef}
+        className="absolute inset-0 flex items-center justify-center overflow-hidden select-none"
+        style={{ touchAction: 'none' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <img
+          ref={imgRef}
+          src={src}
+          alt=""
+          draggable={false}
+          className="max-w-full max-h-full object-contain"
+          style={{ transformOrigin: 'center center', willChange: 'transform' }}
+        />
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-4 right-4 bg-white/90 text-gray-800 text-sm px-4 py-2 rounded-lg font-bold"
+      >
+        閉じる
+      </button>
+      <p className="absolute bottom-6 inset-x-0 text-center text-xs text-white/60 pointer-events-none">
+        2本指で拡大・ダブルタップで拡大／元に戻す
+      </p>
+    </div>
   )
 }
