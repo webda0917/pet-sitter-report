@@ -13,6 +13,9 @@ export function getSupabaseServer(): SupabaseClient {
   return _client
 }
 
+// カルテの添付画像を置く非公開バケット
+export const KARTE_IMAGE_BUCKET = 'karte-images'
+
 export const CLIENT_COLUMNS = 'id, name, furigana, report_example, karte, karte_updated_at, pets(id, name, type, notes)'
 
 // DBの行をアプリの Client 型に変換する
