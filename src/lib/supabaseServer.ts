@@ -15,17 +15,47 @@ export function getSupabaseServer(): SupabaseClient {
 
 // カルテの添付画像を置く非公開バケット
 export const KARTE_IMAGE_BUCKET = 'karte-images'
+export const MAX_IMAGES_PER_SECTION = 2
+
+// 画像パスは「顧客ID/ランダムID.拡張子」。これ以外の形は受け付けない
+const IMAGE_PATH_RE = /^[A-Za-z0-9-]+\/[0-9a-f-]{36}\.(jpg|webp)$/
+
+export function isKarteImagePath(path: unknown, clientId?: string): path is string {
+  return typeof path === 'string' && IMAGE_PATH_RE.test(path) && (!clientId || path.startsWith(`${clientId}/`))
+}
+
+// karte（jsonb）の中では、本文はセクションのキーごとの文字列、画像は `_images` にまとめて持つ
+export const KARTE_IMAGES_FIELD = '_images'
+
+export function splitKarte(raw: unknown): { karte: Record<string, string>; images: Record<string, string[]> } {
+  const karte: Record<string, string> = {}
+  const images: Record<string, string[]> = {}
+  if (!raw || typeof raw !== 'object') return { karte, images }
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (k === KARTE_IMAGES_FIELD && v && typeof v === 'object') {
+      for (const [sk, paths] of Object.entries(v as Record<string, unknown>)) {
+        const valid = Array.isArray(paths) ? paths.filter((p) => isKarteImagePath(p)) : []
+        if (valid.length) images[sk] = valid
+      }
+    } else if (typeof v === 'string') {
+      karte[k] = v
+    }
+  }
+  return { karte, images }
+}
 
 export const CLIENT_COLUMNS = 'id, name, furigana, report_example, karte, karte_updated_at, pets(id, name, type, notes)'
 
 // DBの行をアプリの Client 型に変換する
 export function toClient(row: Record<string, unknown>) {
+  const { karte, images } = splitKarte(row.karte)
   return {
     id: row.id as string,
     name: row.name as string,
     furigana: (row.furigana as string) ?? '',
     reportExample: (row.report_example as string) ?? '',
-    karte: (row.karte as Record<string, string>) ?? {},
+    karte,
+    karteImages: images,
     karteUpdatedAt: (row.karte_updated_at as string) ?? null,
     pets: (row.pets as { id: string; name: string; type: 'dog' | 'cat'; notes?: string }[]) ?? [],
   }

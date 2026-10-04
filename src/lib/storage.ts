@@ -1,10 +1,11 @@
-import type { Client, Karte, Pet, PetType } from '@/types'
+import type { Client, Karte, KarteImages, Pet, PetType } from '@/types'
 
 // データの読み書きはすべて自前のAPI経由（ブラウザから Supabase には直接つながない）
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
-    headers: init?.body ? { 'Content-Type': 'application/json' } : undefined,
+    // FormData（画像）のときはブラウザに Content-Type を任せる
+    headers: typeof init?.body === 'string' ? { 'Content-Type': 'application/json' } : undefined,
   })
   if (res.status === 401) {
     window.location.href = '/login'
@@ -37,12 +38,31 @@ export async function deleteClient(id: string): Promise<void> {
 }
 
 // ─── カルテ ───────────────────────────────────────────────
-export async function saveKarte(clientId: string, karte: Karte): Promise<string | null> {
+export async function saveKarte(clientId: string, karte: Karte, karteImages: KarteImages): Promise<string | null> {
   const res = await api<{ karteUpdatedAt: string | null }>(`/api/clients/${clientId}`, {
     method: 'PATCH',
-    body: JSON.stringify({ karte }),
+    body: JSON.stringify({ karte, karteImages }),
   })
   return res.karteUpdatedAt
+}
+
+// ─── カルテの添付画像 ─────────────────────────────────────
+export async function uploadKarteImage(clientId: string, image: Blob): Promise<string> {
+  const form = new FormData()
+  form.append('clientId', clientId)
+  form.append('file', image)
+  const res = await api<{ path: string }>('/api/karte/images', { method: 'POST', body: form })
+  return res.path
+}
+
+// カルテに保存しなかった画像を消す（失敗しても画面の操作は止めない）
+export function discardKarteImages(clientId: string, paths: string[]): void {
+  if (paths.length === 0) return
+  api('/api/karte/images', { method: 'DELETE', body: JSON.stringify({ clientId, paths }) }).catch(() => {})
+}
+
+export function karteImageUrl(path: string): string {
+  return `/api/karte/images?path=${encodeURIComponent(path)}`
 }
 
 export async function extractKarte(images: string[], petTypes: PetType[]): Promise<Karte> {

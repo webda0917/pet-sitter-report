@@ -10,12 +10,16 @@ export interface Pet {
 // お世話カルテ：セクションのキー → 本文
 export type Karte = Record<string, string>
 
+// カルテの添付画像：セクションのキー → Storage 上のパス（1セクション2枚まで）
+export type KarteImages = Record<string, string[]>
+
 export interface Client {
   id: string
   name: string
   furigana?: string
   pets: Pet[]
   karte?: Karte
+  karteImages?: KarteImages
   karteUpdatedAt?: string | null
   reportExample?: string
 }

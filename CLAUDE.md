@@ -5,7 +5,7 @@
 
 - **報告書作成**：お世話の内容を音声入力 → AIがお客様向けの報告文に整形 → コピーしてLINEで送信
 - **顧客・ペット管理**：お客様名・ふりがな・ペット・報告書の参考例文を登録
-- **お世話カルテ**：お客様ごとのお世話のやり方・注意事項・鍵の受け渡しなどをスタッフ全員で共有。記入済みヒアリングシートの写真から自動入力できる
+- **お世話カルテ**：お客様ごとのお世話のやり方・注意事項・鍵の受け渡しなどをスタッフ全員で共有。記入済みヒアリングシートの写真から自動入力できる。各項目に画像を2枚まで添付できる
 
 本番：https://pet-sitter-report.vercel.app （共通パスワードでログイン）
 
@@ -21,6 +21,7 @@
 ## 技術構成
 - Next.js 14（App Router）+ TypeScript + Tailwind CSS
 - データ：Supabase（`clients`・`pets` テーブル）。ブラウザからは直接つながず、必ず `/api/*` を経由する
+- 添付画像：Supabase Storage の非公開バケット `karte-images`。パスは `clients.karte._images` に持つ
 - AI：Claude API（`claude-sonnet-5-5`）。報告文は effort low、カルテ読み取りは effort medium
 - 配布：GitHub（webda0917/pet-sitter-report、公開リポジトリ）の main に push すると Vercel が自動デプロイ
 
@@ -35,12 +36,15 @@ pet-sitter-report/
     ├── app/
     │   ├── page.tsx               ホーム・画面の切り替え
     │   ├── login/page.tsx         ログイン画面
+    │   ├── diagnostics/page.tsx   専用キーの診断（ログイン後に開く）
     │   └── api/
     │       ├── login/             パスワード確認・クッキー発行
     │       ├── clients/           顧客の取得・登録・更新（カルテ含む）・削除
     │       ├── pets/              ペットの登録・更新・削除
     │       ├── generate/          報告文の生成（AIへの指示文はここ）
-    │       └── karte/extract/     写真からカルテを読み取る
+    │       ├── karte/extract/     写真からカルテを読み取る
+    │       ├── karte/images/      カルテの添付画像（保存・表示・削除）
+    │       └── diagnostics/storage/  専用キーの診断
     ├── components/
     │   ├── ReportForm.tsx         報告書フォーム
     │   ├── ReportPreview.tsx      生成結果のプレビュー・コピー
@@ -60,7 +64,7 @@ pet-sitter-report/
 | `ANTHROPIC_API_KEY` | Claude API キー |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase のプロジェクトURL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 公開キー（service role 未設定時の予備） |
-| `SUPABASE_SERVICE_ROLE_KEY` | サーバー専用キー。RLS有効化後は必須 |
+| `SUPABASE_SERVICE_ROLE_KEY` | サーバー専用キー（Supabase の Secret keys、`sb_secret_`）。画像添付と RLS 有効化後に必須。正しく効いているかは `/diagnostics` で確認 |
 | `APP_PASSWORD` | スタッフ共通のパスワード。変えると全端末がログアウトされる |
 | `SESSION_SECRET` | クッキー署名用のランダム文字列 |
 

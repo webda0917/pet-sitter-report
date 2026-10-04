@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import type { Client, Karte } from '@/types'
+import type { Client, Karte, KarteImages } from '@/types'
 import {
   formatVisitDateTime,
   getDefaultStartDatetime,
@@ -28,7 +28,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const [showKarte, setShowKarte] = useState(false)
   // この画面を開いたあとにカルテを保存した場合の最新内容（clients は親から渡された時点のまま）
-  const [karteOverrides, setKarteOverrides] = useState<Record<string, { karte: Karte; updatedAt: string | null }>>({})
+  const [karteOverrides, setKarteOverrides] = useState<Record<string, { karte: Karte; images: KarteImages; updatedAt: string | null }>>({})
 
   useEffect(() => {
     const SR = window.SpeechRecognition ?? (window as Window & { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition
@@ -119,10 +119,11 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
           client={{
             ...selectedClient,
             karte: karteOverrides[selectedClient.id]?.karte ?? selectedClient.karte,
+            karteImages: karteOverrides[selectedClient.id]?.images ?? selectedClient.karteImages,
             karteUpdatedAt: karteOverrides[selectedClient.id]?.updatedAt ?? selectedClient.karteUpdatedAt,
           }}
           onClose={() => setShowKarte(false)}
-          onSaved={(karte, updatedAt) => setKarteOverrides((prev) => ({ ...prev, [selectedClient.id]: { karte, updatedAt } }))}
+          onSaved={(karte, images, updatedAt) => setKarteOverrides((prev) => ({ ...prev, [selectedClient.id]: { karte, images, updatedAt } }))}
         />
       )}
 
