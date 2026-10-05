@@ -7,6 +7,9 @@ interface Props {
   clients: Client[]
   selectedClientId: string
   onSelect: (clientId: string) => void
+  // 指定すると、選択中の表示に「選択を解除」ボタンを出す（顧客管理で一覧に戻すため）
+  onClear?: () => void
+  clearLabel?: string
 }
 
 // 全角/半角・カタカナ/ひらがな・大文字/小文字の違いを無視して比較するための正規化
@@ -20,7 +23,7 @@ function normalize(s: string): string {
 
 const petIcon = (type: string) => (type === 'dog' ? '🐶' : '🐱')
 
-export default function ClientSearch({ clients, selectedClientId, onSelect }: Props) {
+export default function ClientSearch({ clients, selectedClientId, onSelect, onClear, clearLabel = '解除' }: Props) {
   const [query, setQuery] = useState('')
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -69,6 +72,15 @@ export default function ClientSearch({ clients, selectedClientId, onSelect }: Pr
         >
           変更
         </button>
+        {onClear && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="shrink-0 px-4 py-2 rounded-full border border-gray-300 bg-white text-sm font-medium text-gray-700 active:bg-gray-50"
+          >
+            {clearLabel}
+          </button>
+        )}
       </div>
     )
   }

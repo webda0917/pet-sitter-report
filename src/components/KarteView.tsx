@@ -88,6 +88,8 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
   const [viewing, setViewing] = useState<string | null>(null)
   const attachRef = useRef<HTMLInputElement>(null)
   const attachKeyRef = useRef<string | null>(null)
+  // この編集中に最初に写真を読み取る直前の記入内容。「読み取る前に戻す」で使う
+  const [beforeExtract, setBeforeExtract] = useState<Karte | null>(null)
   const [focusKey, setFocusKey] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
@@ -102,6 +104,7 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
     setDraft({ ...karte })
     setDraftImages({ ...images })
     uploadedRef.current = []
+    setBeforeExtract(null)
     setFocusKey(key ?? null)
     setNotice('')
     setError('')
@@ -114,6 +117,7 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
     uploadedRef.current = []
     setDraft(null)
     setDraftImages(images)
+    setBeforeExtract(null)
     setFocusKey(null)
     setNotice('')
     setError('')
@@ -140,6 +144,7 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
       setDraftImages(cleanedImages)
       setUpdatedAt(at)
       setDraft(null)
+      setBeforeExtract(null)
       setNotice('')
       onSaved?.(cleaned, cleanedImages, at)
     } catch (e) {
@@ -159,11 +164,11 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
     }
     setIsExtracting(true)
     try {
-      const images = await Promise.all(Array.from(files).map(resizeToBase64))
-      if (images.reduce((n, s) => n + s.length, 0) > MAX_TOTAL_BASE64) {
+      const photos = await Promise.all(Array.from(files).map(resizeToBase64))
+      if (photos.reduce((n, s) => n + s.length, 0) > MAX_TOTAL_BASE64) {
         throw new Error('写真の容量が大きすぎます。枚数を減らして読み取ってください。')
       }
-      const extracted = await extractKarte(images, petTypes)
+      const extracted = await extractKarte(photos, petTypes)
       const keys = Object.keys(extracted)
       if (keys.length === 0) {
         setError('写真から読み取れる内容がありませんでした。')
@@ -171,6 +176,8 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
       }
       // 既存の記入は上書きせず、下に追記する
       const base = draft ?? karte
+      if (!beforeExtract) setBeforeExtract({ ...base })
+      if (!draft) setDraftImages({ ...images })
       const next: Karte = { ...base }
       for (const k of keys) {
         next[k] = base[k]?.trim() ? `${base[k].trim()}\n\n【読み取り分】\n${extracted[k]}` : extracted[k]
@@ -183,6 +190,15 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
       setIsExtracting(false)
       if (fileRef.current) fileRef.current.value = ''
     }
+  }
+
+  const undoExtract = () => {
+    if (!beforeExtract) return
+    if (!confirm('写真から読み取って入った内容をすべて取り消し、読み取る前の状態に戻します。\n読み取ったあとに手で直した内容も元に戻ります。もともと記入されていた内容は消えません。\n\nよろしいですか？')) return
+    setDraft({ ...beforeExtract })
+    setBeforeExtract(null)
+    setNotice('')
+    setError('')
   }
 
   const openAttach = (key: string) => {
@@ -283,6 +299,13 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
 
         {notice && (
           <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 text-sm px-4 py-3 rounded-xl">{notice}</div>
+        )}
+        {isEditing && beforeExtract && (
+          <div className="text-right -mt-2">
+            <button type="button" onClick={undoExtract} className="text-sm text-red-600 underline">
+              読み取る前に戻す
+            </button>
+          </div>
         )}
         {error && (
           <div className="bg-red-50 border border-red-300 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>
@@ -389,6 +412,13 @@ export default function KarteView({ client, onClose, onSaved }: Props) {
           )
         })}
 
+        {isEditing && beforeExtract && (
+          <div className="text-right">
+            <button type="button" onClick={undoExtract} className="text-sm text-red-600 underline">
+              読み取る前に戻す
+            </button>
+          </div>
+        )}
         {isEditing && (
           <div className="flex gap-3">
             <button onClick={cancelEdit} className="flex-1 border border-gray-300 bg-white text-gray-700 py-4 rounded-2xl text-base font-medium">

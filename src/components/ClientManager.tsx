@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import type { Client, Pet, PetType } from '@/types'
 import KarteView from './KarteView'
+import ClientSearch from './ClientSearch'
 import {
   getClients,
   addClient,
@@ -25,6 +26,11 @@ export default function ClientManager({ onBack }: Props) {
   const [editingPet, setEditingPet] = useState<{ clientId: string; pet: Pet } | null>(null)
   const [showPetForm, setShowPetForm] = useState<string | null>(null)
   const [karteClient, setKarteClient] = useState<Client | null>(null)
+  // 検索で選んだお客様。選んでいるあいだは、そのお客様だけを表示する
+  const [selectedId, setSelectedId] = useState('')
+  // 選んだお客様が削除された場合は、全員の表示に戻る
+  const selectedClient = clients.find((c) => c.id === selectedId)
+  const visibleClients = selectedClient ? [selectedClient] : clients
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -94,7 +100,17 @@ export default function ClientManager({ onBack }: Props) {
           <p className="text-center text-gray-400 py-12 text-sm">まだ顧客が登録されていません</p>
         )}
 
-        {clients.map((client) => (
+        {!loading && clients.length > 0 && (
+          <ClientSearch
+            clients={clients}
+            selectedClientId={selectedClient?.id ?? ''}
+            onSelect={setSelectedId}
+            onClear={() => setSelectedId('')}
+            clearLabel="すべて表示"
+          />
+        )}
+
+        {visibleClients.map((client) => (
           <div key={client.id} className="bg-white rounded-xl shadow-sm border border-gray-100">
             <div className="px-4 py-3 flex items-center justify-between">
               <div className="min-w-0">
