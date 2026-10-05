@@ -3,16 +3,23 @@ import { CLIENT_COLUMNS, getSupabaseServer, toClient } from '@/lib/supabaseServe
 
 export const dynamic = 'force-dynamic'
 
+async function loadClients(columns: string) {
+  const { data, error } = await getSupabaseServer().from('clients').select(columns).order('created_at', { ascending: true })
+  return { data: (data ?? []) as unknown as Record<string, unknown>[], error }
+}
+
 export async function GET() {
-  const { data, error } = await getSupabaseServer()
-    .from('clients')
-    .select(CLIENT_COLUMNS)
-    .order('created_at', { ascending: true })
+  let { data, error } = await loadClients(CLIENT_COLUMNS)
+  // 列（pets.honorific など）の追加が済んでいなくても、一覧だけは読めるようにする
+  if (error?.code === '42703') {
+    console.error('clients GET missing column, retrying without it:', error.message)
+    ;({ data, error } = await loadClients(CLIENT_COLUMNS.replace(', honorific', '')))
+  }
   if (error) {
     console.error('clients GET error:', error)
     return NextResponse.json({ error: '顧客の読み込みに失敗しました' }, { status: 500 })
   }
-  return NextResponse.json((data ?? []).map((row) => toClient(row as Record<string, unknown>)))
+  return NextResponse.json(data.map((row) => toClient(row)))
 }
 
 export async function POST(req: NextRequest) {
