@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
+import { petCallName, toHonorific } from '@/types'
+import { fixPetNames } from '@/lib/petNames'
 
 // 生成に数秒〜十数秒かかるため、Vercel の関数タイムアウトを延ばす
 export const maxDuration = 60
@@ -19,7 +21,7 @@ const SYSTEM_PROMPT = `あなたはペットシッターサービスの報告書
 - 文末に「〜よ！」「〜よ」をつけない。お客様に教えてあげるような口調になり失礼にあたる
   - NG：「気持ちよさそうにしていましたよ！」「喜んでくれましたよ！」「元気でしたよ」
   - OK：「気持ちよさそうにしていました！」「喜んでくれました！」「元気いっぱいでした」
-- ペットの名前には必ず「ちゃん」をつけて呼ぶ（例：「ポポちゃん」「ミミちゃん」）。絶対に呼び捨てにしない
+- ペットの名前は、入力の【ペットの呼び方】に書かれた表記のとおりに書く。敬称（くん・ちゃん等）を付け替えたり、付け足したり、省いたりしない。「敬称なし」のペットは名前だけで書く。参考例文の呼び方と違っていても【ペットの呼び方】を優先する
 - 絵文字は最小限に控える（🐶🐱🙏🏻のみ可）。ハート系の絵文字（💕❤️🩷など）は絶対に使わない
 - 「！」を適度に使い明るい雰囲気を出す。「！」の直後に半角・全角スペースを入れない（NG：「くれました！ お散歩」 OK：「くれました！お散歩」）
 - 自然な文章の流れでつなげる（箇条書きにしない）
@@ -53,7 +55,7 @@ function formatNextVisit(start: string, end?: string): string {
 export async function POST(req: NextRequest) {
   try {
     const { pets, visitDateTime, fields, reportExample } = (await req.json()) as {
-      pets: { name: string; type: 'dog' | 'cat' }[]
+      pets: { name: string; type: 'dog' | 'cat'; honorific?: string }[]
       visitDateTime: string
       fields: Record<string, string>
       reportExample?: string
@@ -62,7 +64,11 @@ export async function POST(req: NextRequest) {
     const hasDog = pets.some((p) => p.type === 'dog')
     const hasCat = pets.some((p) => p.type === 'cat')
     const petType = hasDog && hasCat ? '犬と猫' : hasDog ? '犬' : '猫'
-    const petNames = pets.map((p) => p.name).join('と')
+    const namedPets = pets.map((p) => ({ name: p.name.trim(), honorific: toHonorific(p.honorific) }))
+    const petNames = namedPets.map(petCallName).join('と')
+    const callNameLines = namedPets
+      .map((p) => (p.honorific ? `- ${petCallName(p)}` : `- ${p.name}（敬称なし。名前だけで書く）`))
+      .join('\n')
 
     // 排泄情報（0回でも必ず出力）
     const peeCount = Number(fields.peeCount ?? 0)
@@ -99,6 +105,7 @@ export async function POST(req: NextRequest) {
       `訪問日時: ${visitDateTime}`,
       `ペット名: ${petNames}`,
       `種別: ${petType}`,
+      `【ペットの呼び方】（本文ではこの表記のとおりに書く）\n${callNameLines}`,
     ]
     lines.push(`【排泄】\n${excretionLines.join('\n')}`)
     if (careItems.length > 0) lines.push(`【ケア】\n${careItems.join('\n')}`)
@@ -133,11 +140,14 @@ export async function POST(req: NextRequest) {
     }
 
     // 先頭に thinking ブロックが来るため、text ブロックだけを取り出す
-    const report = message.content
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('')
-      .trim()
+    const report = fixPetNames(
+      message.content
+        .filter((b) => b.type === 'text')
+        .map((b) => b.text)
+        .join('')
+        .trim(),
+      namedPets,
+    )
     if (!report) {
       return NextResponse.json({ error: 'Unexpected response type' }, { status: 500 })
     }

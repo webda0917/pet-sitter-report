@@ -1,9 +1,28 @@
 export type PetType = 'dog' | 'cat'
 
+// ペットの敬称。報告書ではペット名＋敬称の表記をそのまま使う
+export type Honorific = '' | 'くん' | 'ちゃん'
+export const HONORIFIC_OPTIONS: { value: Honorific; label: string }[] = [
+  { value: '', label: '敬称なし' },
+  { value: 'くん', label: 'くん' },
+  { value: 'ちゃん', label: 'ちゃん' },
+]
+// 列を追加する前のデータ・古い画面から来たデータは、従来どおり「ちゃん」扱い
+export const DEFAULT_HONORIFIC: Honorific = 'ちゃん'
+
+export function toHonorific(v: unknown): Honorific {
+  return v === '' || v === 'くん' || v === 'ちゃん' ? v : DEFAULT_HONORIFIC
+}
+
+export function petCallName(pet: { name: string; honorific?: Honorific }): string {
+  return `${pet.name}${pet.honorific ?? DEFAULT_HONORIFIC}`
+}
+
 export interface Pet {
   id: string
   name: string
   type: PetType
+  honorific: Honorific
   notes?: string
 }
 

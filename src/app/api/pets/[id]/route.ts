@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServer } from '@/lib/supabaseServer'
+import { toHonorific } from '@/types'
 
 type Ctx = { params: { id: string } }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const { name, type, notes } = (await req.json()) as { name?: string; type?: string; notes?: string }
+  const { name, type, notes, honorific } = (await req.json()) as { name?: string; type?: string; notes?: string; honorific?: string }
   if (!name?.trim() || (type !== 'dog' && type !== 'cat')) {
     return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
   }
 
-  const { error } = await getSupabaseServer().from('pets').update({ name, type, notes: notes ?? '' }).eq('id', params.id)
+  const { error } = await getSupabaseServer().from('pets').update({ name: name.trim(), type, notes: notes ?? '', honorific: toHonorific(honorific) }).eq('id', params.id)
   if (error) {
     console.error('pets PATCH error:', error)
     return NextResponse.json({ error: '保存に失敗しました' }, { status: 500 })

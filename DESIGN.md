@@ -51,12 +51,22 @@
 - 写真からの読み取り（3.）は従来どおり写真を保存しない。添付画像とは別物
 - 専用キーが効いているかは、ログイン後に `/diagnostics` で確かめられる（テスト画像の保存→読み出し→削除）
 
+## 5. ペットの敬称（2026-10-05 追加）
+
+- ペットごとに「敬称なし／くん／ちゃん」を選ぶ（`pets.honorific`、既定は従来どおり「ちゃん」）
+- 報告文の生成では【ペットの呼び方】として「名前＋敬称」を渡し、その表記どおりに書かせる
+- それでも AI が敬称を付け替えた・抜かした場合に備え、生成後に `src/lib/petNames.ts` が指定どおりに直す（別の単語の一部になっている名前は触らない）
+
 ## データベース変更（Supabase SQL）
 
 ```sql
 -- カルテの保存場所
 alter table clients add column if not exists karte jsonb not null default '{}';
 alter table clients add column if not exists karte_updated_at timestamptz;
+
+-- ペットの敬称（2026-10-05）
+alter table pets add column if not exists honorific text not null default 'ちゃん'
+  check (honorific in ('', 'くん', 'ちゃん'));
 
 -- 直接接続の拒否（新しいアプリの公開後に実行）
 alter table clients enable row level security;

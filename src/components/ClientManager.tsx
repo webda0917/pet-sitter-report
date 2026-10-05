@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import type { Client, Pet, PetType } from '@/types'
+import type { Client, Honorific, Pet, PetType } from '@/types'
+import { HONORIFIC_OPTIONS, DEFAULT_HONORIFIC, petCallName } from '@/types'
 import KarteView from './KarteView'
 import ClientSearch from './ClientSearch'
 import {
@@ -57,12 +58,12 @@ export default function ClientManager({ onBack }: Props) {
     reload()
   }
 
-  const handleSavePet = async (clientId: string, name: string, type: PetType, notes: string) => {
+  const handleSavePet = async (clientId: string, name: string, type: PetType, honorific: Honorific, notes: string) => {
     if (!name.trim()) return
     if (editingPet && editingPet.clientId === clientId) {
-      await updatePet(editingPet.pet.id, name, type, notes)
+      await updatePet(editingPet.pet.id, name, type, honorific, notes)
     } else {
-      await addPet(clientId, name, type, notes)
+      await addPet(clientId, name, type, honorific, notes)
     }
     setEditingPet(null)
     setShowPetForm(null)
@@ -143,7 +144,7 @@ export default function ClientManager({ onBack }: Props) {
               {client.pets.map((pet) => (
                 <div key={pet.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                   <span className="text-sm text-gray-700">
-                    {pet.type === 'dog' ? '🐶' : '🐱'} {pet.name}
+                    {pet.type === 'dog' ? '🐶' : '🐱'} {petCallName(pet)}
                     {pet.notes && <span className="text-gray-400"> — {pet.notes}</span>}
                   </span>
                   <div className="flex gap-2">
@@ -199,7 +200,7 @@ export default function ClientManager({ onBack }: Props) {
         >
           <PetForm
             initial={editingPet?.pet}
-            onSave={(name, type, notes) => handleSavePet(showPetForm, name, type, notes)}
+            onSave={(name, type, honorific, notes) => handleSavePet(showPetForm, name, type, honorific, notes)}
             onCancel={() => { setShowPetForm(null); setEditingPet(null) }}
           />
         </FormModal>
@@ -269,9 +270,14 @@ function ClientForm({ initialName, initialFurigana, initialExample, onSave, onCa
   )
 }
 
-function PetForm({ initial, onSave, onCancel }: { initial?: Pet; onSave: (name: string, type: PetType, notes: string) => void; onCancel: () => void }) {
+function PetForm({ initial, onSave, onCancel }: {
+  initial?: Pet
+  onSave: (name: string, type: PetType, honorific: Honorific, notes: string) => void
+  onCancel: () => void
+}) {
   const [name, setName] = useState(initial?.name ?? '')
   const [type, setType] = useState<PetType>(initial?.type ?? 'dog')
+  const [honorific, setHonorific] = useState<Honorific>(initial?.honorific ?? DEFAULT_HONORIFIC)
   const [notes, setNotes] = useState(initial?.notes ?? '')
   return (
     <div className="space-y-4">
@@ -294,6 +300,21 @@ function PetForm({ initial, onSave, onCancel }: { initial?: Pet; onSave: (name: 
         </div>
       </div>
       <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">敬称</label>
+        <div className="flex gap-3">
+          {HONORIFIC_OPTIONS.map((o) => (
+            <button key={o.value} onClick={() => setHonorific(o.value)}
+              className={`flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors ${honorific === o.value ? 'bg-emerald-600 text-white border-emerald-600' : 'border-gray-300 text-gray-700'}`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          報告書での呼び方：<span className="font-bold text-gray-800">{name.trim() ? petCallName({ name: name.trim(), honorific }) : '—'}</span>
+        </p>
+      </div>
+      <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">メモ（任意）</label>
         <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="例：臆病、カッパあり"
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -301,7 +322,7 @@ function PetForm({ initial, onSave, onCancel }: { initial?: Pet; onSave: (name: 
       </div>
       <div className="flex gap-3">
         <button onClick={onCancel} className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium">キャンセル</button>
-        <button onClick={() => onSave(name, type, notes)} disabled={!name.trim()} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">保存</button>
+        <button onClick={() => onSave(name, type, honorific, notes)} disabled={!name.trim()} className="flex-1 bg-emerald-600 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-50">保存</button>
       </div>
     </div>
   )

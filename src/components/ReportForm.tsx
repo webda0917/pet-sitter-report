@@ -81,7 +81,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pets: pets.map((p) => ({ name: p.name, type: p.type })),
+          pets: pets.map((p) => ({ name: p.name, type: p.type, honorific: p.honorific })),
           visitDateTime,
           fields,
           reportExample: selectedClient.reportExample ?? '',

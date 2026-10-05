@@ -1,4 +1,4 @@
-import type { Client, Karte, KarteImages, Pet, PetType } from '@/types'
+import type { Client, Honorific, Karte, KarteImages, Pet, PetType } from '@/types'
 
 // データの読み書きはすべて自前のAPI経由（ブラウザから Supabase には直接つながない）
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -74,12 +74,12 @@ export async function extractKarte(images: string[], petTypes: PetType[]): Promi
 }
 
 // ─── ペット CRUD ──────────────────────────────────────────
-export function addPet(clientId: string, name: string, type: PetType, notes: string): Promise<Pet> {
-  return api<Pet>('/api/pets', { method: 'POST', body: JSON.stringify({ clientId, name, type, notes }) })
+export function addPet(clientId: string, name: string, type: PetType, honorific: Honorific, notes: string): Promise<Pet> {
+  return api<Pet>('/api/pets', { method: 'POST', body: JSON.stringify({ clientId, name, type, honorific, notes }) })
 }
 
-export async function updatePet(id: string, name: string, type: PetType, notes: string): Promise<void> {
-  await api(`/api/pets/${id}`, { method: 'PATCH', body: JSON.stringify({ name, type, notes }) })
+export async function updatePet(id: string, name: string, type: PetType, honorific: Honorific, notes: string): Promise<void> {
+  await api(`/api/pets/${id}`, { method: 'PATCH', body: JSON.stringify({ name, type, honorific, notes }) })
 }
 
 export async function deletePet(id: string): Promise<void> {

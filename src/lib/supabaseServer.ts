@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { toHonorific } from '@/types'
 
 let _client: SupabaseClient | null = null
 
@@ -44,7 +45,7 @@ export function splitKarte(raw: unknown): { karte: Record<string, string>; image
   return { karte, images }
 }
 
-export const CLIENT_COLUMNS = 'id, name, furigana, report_example, karte, karte_updated_at, pets(id, name, type, notes)'
+export const CLIENT_COLUMNS = 'id, name, furigana, report_example, karte, karte_updated_at, pets(id, name, type, notes, honorific)'
 
 // DBの行をアプリの Client 型に変換する
 export function toClient(row: Record<string, unknown>) {
@@ -57,6 +58,8 @@ export function toClient(row: Record<string, unknown>) {
     karte,
     karteImages: images,
     karteUpdatedAt: (row.karte_updated_at as string) ?? null,
-    pets: (row.pets as { id: string; name: string; type: 'dog' | 'cat'; notes?: string }[]) ?? [],
+    pets: ((row.pets as { id: string; name: string; type: 'dog' | 'cat'; notes?: string; honorific?: string }[]) ?? []).map(
+      (p) => ({ ...p, honorific: toHonorific(p.honorific) }),
+    ),
   }
 }
