@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { petCallName, toHonorific } from '@/types'
 import { fixPetNames } from '@/lib/petNames'
+import { extractReport } from '@/lib/reportText'
 
 // 生成に数秒〜十数秒かかるため、Vercel の関数タイムアウトを延ばす
 export const maxDuration = 60
@@ -37,7 +38,12 @@ const SYSTEM_PROMPT = `あなたはペットシッターサービスの報告書
 - 出来事はスタッフのメモとチェック項目にあるものだけを書く。メモにない出来事やスタッフの行動（お出迎えの様子、足元を温めた等）を創作しない
 - 一方で、メモにある出来事は、ペットのかわいらしさや元気な様子、スタッフの気持ち（嬉しかった、安心した等）を添えて温かく丁寧に描写する。事務的な箇条書き調にしない
 - 500〜700文字程度が目安
-- 空の項目は省略する`
+- 空の項目は省略する
+
+【出力の形】
+- 出力は、そのままお客様に送る報告文1通だけにする。ヘッダー行から始めて締め文で終える
+- 前置き・補足・注釈・確認事項・修正版・「---」などの区切りは一切書かない
+- メモにない描写を書いてしまったと気づいたら、出力する前に自分で直し、直したあとの1通だけを出す`
 
 function formatNextVisit(start: string, end?: string): string {
   const d = new Date(start)
@@ -140,12 +146,15 @@ export async function POST(req: NextRequest) {
     }
 
     // 先頭に thinking ブロックが来るため、text ブロックだけを取り出す
+    // 補足や修正版が付いてきても、お客様に送る1通だけを残す
     const report = fixPetNames(
-      message.content
-        .filter((b) => b.type === 'text')
-        .map((b) => b.text)
-        .join('')
-        .trim(),
+      extractReport(
+        message.content
+          .filter((b) => b.type === 'text')
+          .map((b) => b.text)
+          .join(''),
+        hasNextVisit,
+      ),
       namedPets,
     )
     if (!report) {
