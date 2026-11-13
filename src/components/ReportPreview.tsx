@@ -1,18 +1,44 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import type { ReportMeta } from '@/types'
+import { saveReport } from '@/lib/storage'
 
 interface Props {
   report: string
+  meta: ReportMeta | null
+  savedId: string | null
+  onSaved: (id: string) => void
   onEdit: () => void
   onNew: () => void
 }
 
-export default function ReportPreview({ report, onEdit, onNew }: Props) {
+export default function ReportPreview({ report, meta, savedId, onSaved, onEdit, onNew }: Props) {
   const [text, setText] = useState(report)
   const [copied, setCopied] = useState(false)
+  const [historyStatus, setHistoryStatus] = useState<'' | 'saved' | 'error'>('')
+  const lastSaved = useRef<string | null>(null)
+  const idRef = useRef<string | null>(savedId)
+  // 続けてコピーされても二重に保存しないよう、保存は1件ずつ順番に行う
+  const queue = useRef<Promise<void>>(Promise.resolve())
+
+  // コピーした文章（＝実際に送る文章）を履歴に残す。次回以降の報告文の作成で参考にする
+  const saveHistory = (body: string) => {
+    queue.current = queue.current.then(async () => {
+      if (!meta || !body.trim() || body === lastSaved.current) return
+      try {
+        idRef.current = await saveReport(idRef.current, meta.clientId, meta.visitLabel, body)
+        onSaved(idRef.current)
+        lastSaved.current = body
+        setHistoryStatus('saved')
+      } catch {
+        setHistoryStatus('error')
+      }
+    })
+  }
 
   const handleCopy = async () => {
+    saveHistory(text)
     try {
       await navigator.clipboard.writeText(text)
       setCopied(true)
@@ -62,6 +88,13 @@ export default function ReportPreview({ report, onEdit, onNew }: Props) {
             className="w-full h-96 border border-gray-200 rounded-xl p-4 text-sm text-gray-800 leading-relaxed focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none bg-white shadow-sm"
           />
         </div>
+
+        {historyStatus === 'saved' && (
+          <p className="text-xs text-gray-500 -mt-2">報告履歴に保存しました。次回からの報告文づくりの参考になります。</p>
+        )}
+        {historyStatus === 'error' && (
+          <p className="text-xs text-red-600 -mt-2">報告履歴に保存できませんでした（コピーはできています）。</p>
+        )}
 
         {/* Actions */}
         <div className="space-y-3 pb-6">

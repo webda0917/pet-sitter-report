@@ -5,6 +5,7 @@ import type { Client, Honorific, Pet, PetType } from '@/types'
 import { HONORIFIC_OPTIONS, DEFAULT_HONORIFIC, petCallName } from '@/types'
 import KarteView from './KarteView'
 import ClientSearch from './ClientSearch'
+import ReportHistory from './ReportHistory'
 import {
   getClients,
   addClient,
@@ -27,6 +28,7 @@ export default function ClientManager({ onBack }: Props) {
   const [editingPet, setEditingPet] = useState<{ clientId: string; pet: Pet } | null>(null)
   const [showPetForm, setShowPetForm] = useState<string | null>(null)
   const [karteClient, setKarteClient] = useState<Client | null>(null)
+  const [historyClient, setHistoryClient] = useState<Client | null>(null)
   // 検索で選んだお客様。選んでいるあいだは、そのお客様だけを表示する
   const [selectedId, setSelectedId] = useState('')
   // 選んだお客様が削除された場合は、全員の表示に戻る
@@ -126,6 +128,12 @@ export default function ClientManager({ onBack }: Props) {
                   カルテ
                 </button>
                 <button
+                  onClick={() => setHistoryClient(client)}
+                  className="text-xs text-gray-700 px-2 py-1 rounded border border-gray-300 bg-white font-medium"
+                >
+                  履歴
+                </button>
+                <button
                   onClick={() => { setEditingClient(client); setShowClientForm(true) }}
                   className="text-xs text-blue-600 px-2 py-1 rounded border border-blue-200"
                 >
@@ -192,6 +200,8 @@ export default function ClientManager({ onBack }: Props) {
       {karteClient && (
         <KarteView client={karteClient} onClose={() => { setKarteClient(null); reload() }} />
       )}
+
+      {historyClient && <ReportHistory client={historyClient} onClose={() => setHistoryClient(null)} />}
 
       {showPetForm && (
         <FormModal

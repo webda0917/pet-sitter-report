@@ -1,4 +1,4 @@
-import type { Client, Honorific, Karte, KarteImages, Pet, PetType } from '@/types'
+import type { Client, Honorific, Karte, KarteImages, Pet, PetType, SavedReport } from '@/types'
 
 // データの読み書きはすべて自前のAPI経由（ブラウザから Supabase には直接つながない）
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
@@ -71,6 +71,25 @@ export async function extractKarte(images: string[], petTypes: PetType[]): Promi
     body: JSON.stringify({ images, petTypes }),
   })
   return res.karte
+}
+
+// ─── 報告文の履歴 ─────────────────────────────────────────
+export function getReports(clientId: string): Promise<SavedReport[]> {
+  return api<SavedReport[]>(`/api/reports?clientId=${encodeURIComponent(clientId)}`)
+}
+
+// 初回は新しく保存し、2回目以降（同じ訪問を直してコピーし直したとき）は上書きする
+export async function saveReport(id: string | null, clientId: string, visitLabel: string, body: string): Promise<string> {
+  if (id) {
+    await api(`/api/reports/${id}`, { method: 'PATCH', body: JSON.stringify({ body }) })
+    return id
+  }
+  const res = await api<{ id: string }>('/api/reports', { method: 'POST', body: JSON.stringify({ clientId, visitLabel, body }) })
+  return res.id
+}
+
+export async function deleteReport(id: string): Promise<void> {
+  await api(`/api/reports/${id}`, { method: 'DELETE' })
 }
 
 // ─── ペット CRUD ──────────────────────────────────────────

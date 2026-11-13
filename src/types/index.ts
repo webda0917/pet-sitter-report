@@ -43,6 +43,21 @@ export interface Client {
   reportExample?: string
 }
 
+// 実際に送った報告文（「テキストをコピー」を押した時点の文章）
+export interface SavedReport {
+  id: string
+  clientId: string
+  visitLabel: string
+  body: string
+  createdAt: string
+}
+
+// 生成した報告文が、どのお客様のどの訪問のものか（履歴の保存に使う）
+export interface ReportMeta {
+  clientId: string
+  visitLabel: string
+}
+
 export interface DogFormFields {
   greeting: string
   weather: string

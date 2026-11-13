@@ -63,3 +63,17 @@ export function toClient(row: Record<string, unknown>) {
     ),
   }
 }
+
+// ─── 報告文の履歴（reports テーブル） ─────────────────────
+export const REPORT_COLUMNS = 'id, client_id, visit_label, body, created_at'
+export const MAX_REPORT_LENGTH = 5000
+
+export function toReport(row: Record<string, unknown>) {
+  return {
+    id: row.id as string,
+    clientId: String(row.client_id),
+    visitLabel: (row.visit_label as string) ?? '',
+    body: (row.body as string) ?? '',
+    createdAt: row.created_at as string,
+  }
+}

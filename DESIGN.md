@@ -57,6 +57,15 @@
 - 報告文の生成では【ペットの呼び方】として「名前＋敬称」を渡し、その表記どおりに書かせる
 - それでも AI が敬称を付け替えた・抜かした場合に備え、生成後に `src/lib/petNames.ts` が指定どおりに直す（別の単語の一部になっている名前は触らない）
 
+## 6. 報告文の履歴（2026-11-13 追加）
+
+- プレビュー画面で「テキストをコピー」を押した時点の文章（スタッフの手直しを含む、実際に送る文章）を `reports` テーブルに保存する
+- 同じお客様・同じ訪問日時の報告文は1件として扱う。直してコピーし直したり、作り直してコピーしたりした場合は上書きする
+- 新しい報告文を作るとき、そのお客様の直近3件をサーバー側で読み、AI に【最近の報告書】として渡す。書き方・トーンを合わせ、今日のメモに関係する内容があるときだけ前回とつなげて書く。過去の報告にしかない出来事は書かせない
+- 顧客管理の「履歴」から、お客様ごとに一覧・全文表示・削除ができる。直近3件には「次回の参考」の印を付ける。削除したものは AI に渡さない
+- 表が無い・読めないときも、報告文の作成は止めない（履歴なしで作る）
+- 手で登録する「報告書の参考例文」（`clients.report_example`）はこれまでどおり使う
+
 ## データベース変更（Supabase SQL）
 
 ```sql
@@ -67,6 +76,24 @@ alter table clients add column if not exists karte_updated_at timestamptz;
 -- ペットの敬称（2026-10-05）
 alter table pets add column if not exists honorific text not null default 'ちゃん'
   check (honorific in ('', 'くん', 'ちゃん'));
+
+-- 報告文の履歴（2026-11-13）。clients.id と同じ型で client_id を作る
+do $$
+declare id_type text;
+begin
+  select format_type(atttypid, atttypmod) into id_type
+    from pg_attribute where attrelid = 'public.clients'::regclass and attname = 'id';
+  execute format($f$
+    create table if not exists public.reports (
+      id uuid primary key default gen_random_uuid(),
+      client_id %s not null references public.clients(id) on delete cascade,
+      visit_label text not null default '',
+      body text not null,
+      created_at timestamptz not null default now()
+    )$f$, id_type);
+end $$;
+create index if not exists reports_client_created_idx on public.reports (client_id, created_at desc);
+alter table public.reports enable row level security;
 
 -- 直接接続の拒否（新しいアプリの公開後に実行）
 alter table clients enable row level security;

@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect } from 'react'
-import type { Client } from '@/types'
+import type { Client, ReportMeta } from '@/types'
 import { getClients } from '@/lib/storage'
 import ClientManager from '@/components/ClientManager'
 import ReportForm from '@/components/ReportForm'
@@ -15,6 +15,10 @@ export default function Home() {
   const [view, setView] = useState<View>('home')
   const [clients, setClients] = useState<Client[]>([])
   const [report, setReport] = useState('')
+  const [reportMeta, setReportMeta] = useState<ReportMeta | null>(null)
+  // 履歴に保存済みの報告文。同じお客様・同じ訪問日時で作り直したときは、この1件を上書きする
+  const [savedReport, setSavedReport] = useState<{ key: string; id: string } | null>(null)
+  const reportKey = reportMeta ? `${reportMeta.clientId}|${reportMeta.visitLabel}` : ''
 
   const loadClients = async () => {
     try { setClients(await getClients()) } catch { setClients([]) }
@@ -45,15 +49,18 @@ export default function Home() {
         <div style={{ display: view === 'report' ? undefined : 'none' }}>
           <ReportForm
             clients={clients.filter((c) => c.pets.length > 0)}
-            onGenerate={(text) => { setReport(text); setView('preview') }}
+            onGenerate={(text, meta) => { setReport(text); setReportMeta(meta); setView('preview') }}
             onBack={() => setView('home')}
           />
         </div>
         {view === 'preview' && (
           <ReportPreview
             report={report}
+            meta={reportMeta}
+            savedId={savedReport?.key === reportKey ? savedReport.id : null}
+            onSaved={(id) => setSavedReport({ key: reportKey, id })}
             onEdit={() => setView('report')}
-            onNew={() => { setReport(''); setView('home') }}
+            onNew={() => { setReport(''); setReportMeta(null); setSavedReport(null); setView('home') }}
           />
         )}
       </>

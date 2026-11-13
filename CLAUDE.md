@@ -5,6 +5,7 @@
 
 - **報告書作成**：お世話の内容を音声入力 → AIがお客様向けの報告文に整形 → コピーしてLINEで送信
 - **顧客・ペット管理**：お客様名・ふりがな・ペット（敬称つき）・報告書の参考例文を登録
+- **報告履歴**：コピーした報告文を自動で保存し、次回の報告文づくりで直近3件をAIが参考にする。顧客管理の「履歴」で見返し・削除できる
 - **お世話カルテ**：お客様ごとのお世話のやり方・注意事項・鍵の受け渡しなどをスタッフ全員で共有。記入済みヒアリングシートの写真から自動入力できる。各項目に画像を2枚まで添付できる
 
 本番：https://pet-sitter-report.vercel.app （共通パスワードでログイン）
@@ -20,7 +21,7 @@
 
 ## 技術構成
 - Next.js 14（App Router）+ TypeScript + Tailwind CSS
-- データ：Supabase（`clients`・`pets` テーブル）。ブラウザからは直接つながず、必ず `/api/*` を経由する
+- データ：Supabase（`clients`・`pets`・`reports` テーブル）。ブラウザからは直接つながず、必ず `/api/*` を経由する
 - 添付画像：Supabase Storage の非公開バケット `karte-images`。パスは `clients.karte._images` に持つ
 - AI：Claude API（`claude-sonnet-5-5`）。報告文は effort low、カルテ読み取りは effort medium
 - 配布：GitHub（webda0917/pet-sitter-report、公開リポジトリ）の main に push すると Vercel が自動デプロイ
@@ -42,6 +43,7 @@ pet-sitter-report/
     │       ├── clients/           顧客の取得・登録・更新（カルテ含む）・削除
     │       ├── pets/              ペットの登録・更新・削除
     │       ├── generate/          報告文の生成（AIへの指示文はここ）
+    │       ├── reports/           報告文の履歴（一覧・保存・上書き・削除）
     │       ├── karte/extract/     写真からカルテを読み取る
     │       ├── karte/images/      カルテの添付画像（保存・表示・削除）
     │       └── diagnostics/storage/  専用キーの診断
@@ -50,6 +52,7 @@ pet-sitter-report/
     │   ├── ReportPreview.tsx      生成結果のプレビュー・コピー
     │   ├── ClientSearch.tsx       顧客の検索・サジェスト
     │   ├── ClientManager.tsx      顧客・ペット管理
+    │   ├── ReportHistory.tsx      お客様ごとの報告履歴
     │   └── KarteView.tsx          カルテの表示・編集・写真読み取り
     └── lib/
         ├── storage.ts             ブラウザ側のAPI呼び出し・日時ユーティリティ
@@ -74,6 +77,7 @@ pet-sitter-report/
 - ペットの動作に尊敬語を使わない
 - 文末に「〜よ！」をつけない
 - メモにない出来事を創作しない。メモにある出来事は気持ちを添えて温かく書く
+- 直近3件の報告履歴は書き方の参考と、今日のメモに関係するときだけ前回とのつながりに使う
 
 ## 注意事項
 - このフォルダは iCloud 同期下にあり、ここで `npm run build` すると非常に遅い。検証は同期されない場所にコピーして行う

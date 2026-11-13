@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { petCallName, toHonorific } from '@/types'
 import { fixPetNames } from '@/lib/petNames'
+import { getSupabaseServer } from '@/lib/supabaseServer'
 import { extractReport } from '@/lib/reportText'
 
 // 生成に数秒〜十数秒かかるため、Vercel の関数タイムアウトを延ばす
@@ -37,6 +38,7 @@ const SYSTEM_PROMPT = `あなたはペットシッターサービスの報告書
   - 締め文は「本日もありがとうございました🙏🏻\n\nまたご依頼ございましたらお知らせくださいませ🙏🏻」
 - 出来事はスタッフのメモとチェック項目にあるものだけを書く。メモにない出来事やスタッフの行動（お出迎えの様子、足元を温めた等）を創作しない
 - 一方で、メモにある出来事は、ペットのかわいらしさや元気な様子、スタッフの気持ち（嬉しかった、安心した等）を添えて温かく丁寧に描写する。事務的な箇条書き調にしない
+- 【最近の報告書】が渡された場合、書き方・言い回し・トーンはそれに合わせる。前回までの様子に触れてよいのは、今日のメモやチェック項目に関係する内容があるときだけ（例：前回は食欲が少なめ→今日は完食）。過去の報告にしかない出来事を今日の出来事として書かない。過去の文章をそのまま写さない
 - 500〜700文字程度が目安
 - 空の項目は省略する
 
@@ -44,6 +46,25 @@ const SYSTEM_PROMPT = `あなたはペットシッターサービスの報告書
 - 出力は、そのままお客様に送る報告文1通だけにする。ヘッダー行から始めて締め文で終える
 - 前置き・補足・注釈・確認事項・修正版・「---」などの区切りは一切書かない
 - メモにない描写を書いてしまったと気づいたら、出力する前に自分で直し、直したあとの1通だけを出す`
+
+// 次回以降の報告に反映させる、直近の報告文の件数
+const HISTORY_COUNT = 3
+
+// そのお客様に実際に送った直近の報告文（新しい順）。読めなくても報告文の作成は止めない
+async function loadRecentReports(clientId: string | undefined): Promise<{ visitLabel: string; body: string }[]> {
+  if (!clientId) return []
+  const { data, error } = await getSupabaseServer()
+    .from('reports')
+    .select('visit_label, body')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(HISTORY_COUNT)
+  if (error) {
+    console.error('generate: reports read error:', error)
+    return []
+  }
+  return (data ?? []).map((r) => ({ visitLabel: r.visit_label ?? '', body: r.body ?? '' }))
+}
 
 function formatNextVisit(start: string, end?: string): string {
   const d = new Date(start)
@@ -60,7 +81,8 @@ function formatNextVisit(start: string, end?: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const { pets, visitDateTime, fields, reportExample } = (await req.json()) as {
+    const { clientId, pets, visitDateTime, fields, reportExample } = (await req.json()) as {
+      clientId?: string
       pets: { name: string; type: 'dog' | 'cat'; honorific?: string }[]
       visitDateTime: string
       fields: Record<string, string>
@@ -129,7 +151,14 @@ export async function POST(req: NextRequest) {
       ? `【このお客様への過去の報告書（参考例文）】\n以下の例文を参考に、同じ文体・表現のトーンで作成してください。\n\n${reportExample.trim()}\n\n---\n\n`
       : ''
 
-    const userPrompt = `${exampleSection}以下の情報をもとに報告文を作成してください。\n\n${lines.join('\n\n')}`
+    const recent = await loadRecentReports(clientId)
+    const historySection = recent.length
+      ? `【最近の報告書】（このお客様に実際に送ったもの。新しい順）\n書き方・トーンはこれに合わせてください。前回までの様子は、今日のメモに関係する内容があるときだけ、比較やつながりとして触れてかまいません。過去の報告にしかない出来事を今日の出来事として書かないでください。\n\n${recent
+          .map((r, i) => `■ ${i === 0 ? '前回' : `${i + 1}回前`}${r.visitLabel ? `（${r.visitLabel}）` : ''}\n${r.body}`)
+          .join('\n\n')}\n\n---\n\n`
+      : ''
+
+    const userPrompt = `${exampleSection}${historySection}以下の情報をもとに報告文を作成してください。\n\n${lines.join('\n\n')}`
 
     // 思考分も max_tokens を消費するため余裕を持たせる
     const message = await client.messages.create({

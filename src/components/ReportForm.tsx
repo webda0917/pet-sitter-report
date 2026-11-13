@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import type { Client, Karte, KarteImages } from '@/types'
+import type { Client, Karte, KarteImages, ReportMeta } from '@/types'
 import {
   formatVisitDateTime,
   getDefaultStartDatetime,
@@ -12,7 +12,7 @@ import KarteView from './KarteView'
 
 interface Props {
   clients: Client[]
-  onGenerate: (report: string) => void
+  onGenerate: (report: string, meta: ReportMeta) => void
   onBack: () => void
 }
 
@@ -81,6 +81,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          clientId: selectedClient.id,
           pets: pets.map((p) => ({ name: p.name, type: p.type, honorific: p.honorific })),
           visitDateTime,
           fields,
@@ -89,7 +90,7 @@ export default function ReportForm({ clients, onGenerate, onBack }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? '生成に失敗しました')
-      onGenerate(data.report)
+      onGenerate(data.report, { clientId: selectedClient.id, visitLabel: visitDateTime })
     } catch (e) {
       setError(e instanceof Error ? e.message : '生成に失敗しました')
     } finally {
