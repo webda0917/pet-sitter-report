@@ -20,7 +20,7 @@
 カルテの記入は「顧客・ペット管理」→ 検索欄でお客様を選ぶ（または一覧から）→「カルテ」から。
 
 ## 技術構成
-- Next.js 14（App Router）+ TypeScript + Tailwind CSS
+- Next.js 15（App Router、15.5.29）+ React 19 + TypeScript + Tailwind CSS。14 系は修正版が出ないため 2026-11-13 に更新。`npm audit` で既知の脆弱性を定期的に確認する
 - データ：Supabase（`clients`・`pets`・`reports` テーブル）。ブラウザからは直接つながず、必ず `/api/*` を経由する
 - 添付画像：Supabase Storage の非公開バケット `karte-images`。パスは `clients.karte._images` に持つ
 - AI：Claude API（`claude-sonnet-5-5`）。報告文は effort low、カルテ読み取りは effort medium
