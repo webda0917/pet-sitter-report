@@ -7,6 +7,9 @@ type Result = {
   key: { kind: string; hasSurroundingWhitespace: boolean; sameAsPublicKey: boolean }
   similarEnvNames: string[]
   storage: { ran: boolean; steps: { label: string; ok: boolean; detail?: string }[] }
+  lock?: { ran: boolean; steps: { label: string; ok: boolean; detail?: string }[] }
+  lockOk?: boolean
+  loginLimiter?: boolean
 }
 
 // キーの種類ごとの判定と、次にやること
@@ -51,7 +54,8 @@ export default function DiagnosticsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-md mx-auto space-y-4">
-        <h1 className="text-lg font-bold text-gray-800 pt-2">専用キーの診断</h1>
+        <h1 className="text-lg font-bold text-gray-800 pt-2">安全性の診断</h1>
+        <h2 className="text-base font-bold text-gray-800">専用キー</h2>
         <p className="text-xs text-gray-500">
           顧客・ペットのデータには触れません。画像用の非公開の保存場所にテスト画像を置き、読み出せたら削除します。
         </p>
@@ -80,6 +84,41 @@ export default function DiagnosticsPage() {
                 {!result.storage.ran && <Row ok={false} label="キーが無いため、保存のテストは行っていません" />}
               </ul>
             </section>
+
+            {result.lock && (
+              <>
+                <h2 className="text-base font-bold text-gray-800 pt-2">データベースの鍵</h2>
+                <p className="text-xs text-gray-500">
+                  外から誰でも使える「公開キー」で、顧客データが読めないことを実際に試した結果です。
+                </p>
+                <div className={`rounded-xl px-4 py-4 text-base font-bold ${result.lock.ran && result.lockOk ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                  {!result.lock.ran ? '鍵の確認を実行できませんでした' : result.lockOk ? '公開キーでは顧客データを読めません' : '公開キーで読めるデータがあります'}
+                </div>
+                <section className="bg-white rounded-xl px-4 shadow-sm">
+                  <ul>
+                    {result.lock.steps.map((s, i) => (
+                      <Row key={i} ok={s.ok} label={s.label} detail={s.detail} />
+                    ))}
+                    {!result.lock.ran && <Row ok={false} label="専用キーまたは公開キーが正しく設定されていないため、試せませんでした" />}
+                  </ul>
+                </section>
+              </>
+            )}
+
+            {result.loginLimiter !== undefined && (
+              <>
+                <h2 className="text-base font-bold text-gray-800 pt-2">ログインの回数制限</h2>
+                <section className="bg-white rounded-xl px-4 shadow-sm">
+                  <ul>
+                    <Row
+                      ok={result.loginLimiter}
+                      label={result.loginLimiter ? '有効です（同じ回線から15分に10回まちがえると一時停止）' : 'まだ有効になっていません'}
+                      detail={result.loginLimiter ? undefined : '記録用の表（login_attempts）がありません。SQL の実行が必要です'}
+                    />
+                  </ul>
+                </section>
+              </>
+            )}
 
             <section className="bg-white rounded-xl px-4 py-3 shadow-sm">
               <p className="text-xs text-gray-500 mb-1">Supabase 関連の環境変数（名前のみ）</p>

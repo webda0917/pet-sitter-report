@@ -4,6 +4,7 @@ import { petCallName, toHonorific } from '@/types'
 import { fixPetNames } from '@/lib/petNames'
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import { extractReport } from '@/lib/reportText'
+import { requireSession } from '@/lib/auth'
 
 // 生成に数秒〜十数秒かかるため、Vercel の関数タイムアウトを延ばす
 export const maxDuration = 60
@@ -80,6 +81,9 @@ function formatNextVisit(start: string, end?: string): string {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   try {
     const { clientId, pets, visitDateTime, fields, reportExample } = (await req.json()) as {
       clientId?: string

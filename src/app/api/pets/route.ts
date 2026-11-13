@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import { toHonorific } from '@/types'
+import { requireSession } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const { clientId, name, type, notes, honorific } = (await req.json()) as {
     clientId?: string
     name?: string

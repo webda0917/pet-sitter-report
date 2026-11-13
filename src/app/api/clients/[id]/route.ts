@@ -2,16 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import {
   getSupabaseServer,
   isKarteImagePath,
+  isSectionKey,
   splitKarte,
   KARTE_IMAGE_BUCKET,
   KARTE_IMAGES_FIELD,
   MAX_IMAGES_PER_SECTION,
 } from '@/lib/supabaseServer'
+import { requireSession } from '@/lib/auth'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 // 顧客の基本情報、またはカルテを更新する（送られてきた項目だけ）
 export async function PATCH(req: NextRequest, { params }: Ctx) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const { id } = await params
   const body = (await req.json()) as {
     name?: string
@@ -49,12 +54,12 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       images = {}
       for (const [key, paths] of Object.entries(body.karteImages)) {
         const valid = (Array.isArray(paths) ? paths : []).filter((p) => isKarteImagePath(p, id))
-        if (valid.length) images[key] = valid.slice(0, MAX_IMAGES_PER_SECTION)
+        if (valid.length && isSectionKey(key)) images[key] = valid.slice(0, MAX_IMAGES_PER_SECTION)
       }
     }
 
     const text: Record<string, string> = {}
-    for (const [k, v] of Object.entries(body.karte)) if (k !== KARTE_IMAGES_FIELD && typeof v === 'string') text[k] = v
+    for (const [k, v] of Object.entries(body.karte)) if (isSectionKey(k) && typeof v === 'string') text[k] = v
 
     const kept = new Set(Object.values(images).flat())
     removedImages = Object.values(oldImages).flat().filter((p) => !kept.has(p))
@@ -83,6 +88,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const { id } = await params
   const { error } = await getSupabaseServer().from('clients').delete().eq('id', id)
   if (error) {

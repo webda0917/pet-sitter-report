@@ -25,6 +25,10 @@ export function isKarteImagePath(path: unknown, clientId?: string): path is stri
   return typeof path === 'string' && IMAGE_PATH_RE.test(path) && (!clientId || path.startsWith(`${clientId}/`))
 }
 
+// カルテのセクション名として受け付ける形（英字で始まる英数字）。`__proto__` などの特殊な名前を通さない
+const SECTION_KEY_RE = /^[A-Za-z][A-Za-z0-9]{0,39}$/
+export const isSectionKey = (key: string) => SECTION_KEY_RE.test(key)
+
 // karte（jsonb）の中では、本文はセクションのキーごとの文字列、画像は `_images` にまとめて持つ
 export const KARTE_IMAGES_FIELD = '_images'
 
@@ -36,9 +40,9 @@ export function splitKarte(raw: unknown): { karte: Record<string, string>; image
     if (k === KARTE_IMAGES_FIELD && v && typeof v === 'object') {
       for (const [sk, paths] of Object.entries(v as Record<string, unknown>)) {
         const valid = Array.isArray(paths) ? paths.filter((p) => isKarteImagePath(p)) : []
-        if (valid.length) images[sk] = valid
+        if (valid.length && isSectionKey(sk)) images[sk] = valid
       }
-    } else if (typeof v === 'string') {
+    } else if (typeof v === 'string' && isSectionKey(k)) {
       karte[k] = v
     }
   }

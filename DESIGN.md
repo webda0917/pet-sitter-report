@@ -66,6 +66,14 @@
 - 表が無い・読めないときも、報告文の作成は止めない（履歴なしで作る）
 - 手で登録する「報告書の参考例文」（`clients.report_example`）はこれまでどおり使う
 
+## 7. 安全対策の追加（2026-11-13）
+
+- **ログインの二重確認**：`src/middleware.ts` に加えて、ログイン以外のすべての API が入口で `requireSession()`（`src/lib/auth.ts`）を呼ぶ。middleware が効かない事態でもデータを素通しにしない。API を追加するときは必ず先頭に入れる
+- **ログインの回数制限**：`src/lib/loginLimiter.ts`。試行を `login_attempts` に記録し、同じ回線から15分に10回を超えたら 429 で断る（全体では15分に200回）。正しく入るとその回線の記録は消える。IP は HMAC で変換して保存する。表が無いときは制限なしで通す
+- **鍵（RLS）の実測**：`/diagnostics` で、公開キーを使って clients・pets・reports・カルテの写真が読めないことを実際に試して表示する。表を増やしたら診断の対象にも足す
+- カルテのセクション名は英数字だけ受け付ける（`isSectionKey`）
+- 公開リポジトリから辿れる過去のデプロイURLは、削除済みか Vercel のログイン必須になっていることを確認済み
+
 ## データベース変更（Supabase SQL）
 
 ```sql
@@ -94,6 +102,16 @@ begin
 end $$;
 create index if not exists reports_client_created_idx on public.reports (client_id, created_at desc);
 alter table public.reports enable row level security;
+
+-- ログイン試行の記録（2026-11-13）。パスワードの総当たり対策
+create table if not exists public.login_attempts (
+  id bigint generated always as identity primary key,
+  ip_hash text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists login_attempts_ip_idx on public.login_attempts (ip_hash, created_at desc);
+create index if not exists login_attempts_created_idx on public.login_attempts (created_at);
+alter table public.login_attempts enable row level security;
 
 -- 直接接続の拒否（新しいアプリの公開後に実行）
 alter table clients enable row level security;

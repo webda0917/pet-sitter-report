@@ -37,7 +37,7 @@ pet-sitter-report/
     ├── app/
     │   ├── page.tsx               ホーム・画面の切り替え
     │   ├── login/page.tsx         ログイン画面
-    │   ├── diagnostics/page.tsx   専用キーの診断（ログイン後に開く）
+    │   ├── diagnostics/page.tsx   安全性の診断（専用キー・データベースの鍵・回数制限。ログイン後に開く）
     │   └── api/
     │       ├── login/             パスワード確認・クッキー発行
     │       ├── clients/           顧客の取得・登録・更新（カルテ含む）・削除
@@ -58,6 +58,8 @@ pet-sitter-report/
         ├── storage.ts             ブラウザ側のAPI呼び出し・日時ユーティリティ
         ├── supabaseServer.ts      サーバー専用のSupabase接続
         ├── session.ts             ログインのクッキー署名・検証
+        ├── auth.ts                各 API の入口で呼ぶログイン確認（requireSession）
+        ├── loginLimiter.ts        ログインの回数制限（login_attempts テーブル）
         └── karteSections.ts       カルテのセクション定義（ヒアリングシートの項目）
 ```
 
@@ -83,6 +85,11 @@ pet-sitter-report/
 - このフォルダは iCloud 同期下にあり、ここで `npm run build` すると非常に遅い。検証は同期されない場所にコピーして行う
 - リポジトリは公開設定。顧客情報を含むファイルをコミットしない
 - データベースの列を増やすときは、Supabase で列を追加してからアプリを公開する（逆だと顧客一覧が読めなくなる）
+
+## 安全面のルール
+- API を追加するときは、関数の先頭で `requireSession()` を呼ぶ（middleware だけに頼らない）
+- 表を追加するときは RLS を有効にし（ポリシーは作らない）、`/diagnostics` の鍵の確認の対象にも足す
+- 変更を公開したら `/diagnostics` が全部緑かを確かめる。`npm audit --omit=dev` は 0 件を保つ
 
 ## よく使うプロンプト例
 ```

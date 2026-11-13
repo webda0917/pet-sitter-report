@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { CLIENT_COLUMNS, getSupabaseServer, toClient } from '@/lib/supabaseServer'
+import { requireSession } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +10,9 @@ async function loadClients(columns: string) {
 }
 
 export async function GET() {
+  const denied = await requireSession()
+  if (denied) return denied
+
   let { data, error } = await loadClients(CLIENT_COLUMNS)
   // 列（pets.honorific など）の追加が済んでいなくても、一覧だけは読めるようにする
   if (error?.code === '42703') {
@@ -23,6 +27,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const { name, furigana, reportExample } = (await req.json()) as { name?: string; furigana?: string; reportExample?: string }
   if (!name?.trim()) return NextResponse.json({ error: 'お客様名を入力してください' }, { status: 400 })
 

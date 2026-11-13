@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServer } from '@/lib/supabaseServer'
 import { toHonorific } from '@/types'
+import { requireSession } from '@/lib/auth'
 
 type Ctx = { params: Promise<{ id: string }> }
 
 export async function PATCH(req: NextRequest, { params }: Ctx) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const { id } = await params
   const { name, type, notes, honorific } = (await req.json()) as { name?: string; type?: string; notes?: string; honorific?: string }
   if (!name?.trim() || (type !== 'dog' && type !== 'cat')) {
@@ -20,6 +24,9 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const { id } = await params
   const { error } = await getSupabaseServer().from('pets').delete().eq('id', id)
   if (error) {

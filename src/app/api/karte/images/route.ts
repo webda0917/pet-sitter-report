@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServer, isKarteImagePath, splitKarte, KARTE_IMAGE_BUCKET } from '@/lib/supabaseServer'
+import { requireSession } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,9 @@ const SIGNED_URL_SECONDS = 60 * 60
 
 // 画像を表示する：短時間だけ有効な署名付きURLへ転送する
 export async function GET(req: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const path = req.nextUrl.searchParams.get('path')
   if (!isKarteImagePath(path)) return NextResponse.json({ error: '画像が見つかりません' }, { status: 404 })
 
@@ -29,6 +33,9 @@ export async function GET(req: NextRequest) {
 
 // 画像を保存する（カルテへの反映は、カルテの「保存」で行う）
 export async function POST(req: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const form = await req.formData().catch(() => null)
   const clientId = form?.get('clientId')
   const file = form?.get('file')
@@ -52,6 +59,9 @@ export async function POST(req: NextRequest) {
 
 // カルテに保存しなかった画像を消す。保存済みのカルテに載っている画像は消さない
 export async function DELETE(req: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const { clientId, paths } = (await req.json().catch(() => ({}))) as { clientId?: string; paths?: unknown[] }
   if (typeof clientId !== 'string' || !Array.isArray(paths)) {
     return NextResponse.json({ error: '削除する画像がありません' }, { status: 400 })

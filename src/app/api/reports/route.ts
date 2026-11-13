@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseServer, REPORT_COLUMNS, MAX_REPORT_LENGTH, toReport } from '@/lib/supabaseServer'
+import { requireSession } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,6 +8,9 @@ export const dynamic = 'force-dynamic'
 
 // お客様ごとの履歴（新しい順）
 export async function GET(req: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const clientId = req.nextUrl.searchParams.get('clientId')
   if (!clientId) return NextResponse.json({ error: 'お客様が指定されていません' }, { status: 400 })
 
@@ -25,6 +29,9 @@ export async function GET(req: NextRequest) {
 
 // 「テキストをコピー」を押したときに保存する
 export async function POST(req: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const { clientId, visitLabel, body } = (await req.json().catch(() => ({}))) as {
     clientId?: string
     visitLabel?: string

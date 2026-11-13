@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { KARTE_IMAGE_BUCKET } from '@/lib/supabaseServer'
+import { requireSession } from '@/lib/auth'
+import { isLoginLimiterReady } from '@/lib/loginLimiter'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +37,9 @@ const TEST_PNG = Buffer.from(
 )
 
 export async function GET() {
+  const denied = await requireSession()
+  if (denied) return denied
+
   const raw = process.env.SUPABASE_SERVICE_ROLE_KEY
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -92,5 +97,50 @@ export async function GET() {
   const keyOk = key.kind === 'secret' || key.kind === 'service_role_jwt'
   const storageOk = storage.ran && storage.steps.every((s) => s.ok)
 
-  return NextResponse.json({ ok: keyOk && storageOk, key, similarEnvNames, storage })
+  // データベースの鍵（RLS）の実測：公開キーで顧客データが読めないことを確かめる。
+  // 公開キーはブラウザに出てもよい前提の値なので、これで読めたら「誰でも読める」ことになる
+  const lock: { ran: boolean; steps: { label: string; ok: boolean; detail?: string }[] } = { ran: false, steps: [] }
+  if (url && anon && keyOk && raw && anon !== raw.trim()) {
+    lock.ran = true
+    try {
+      const admin = createClient(url, raw, { auth: { persistSession: false } })
+      const pub = createClient(url, anon, { auth: { persistSession: false } })
+      const TABLES: [string, string][] = [['clients', '顧客'], ['pets', 'ペット'], ['reports', '報告履歴']]
+      for (const [table, name] of TABLES) {
+        const [all, open] = await Promise.all([
+          admin.from(table).select('id', { count: 'exact' }).limit(1),
+          pub.from(table).select('id', { count: 'exact' }).limit(1),
+        ])
+        const total = all.count ?? 0
+        const visible = open.error ? 0 : Math.max(open.count ?? 0, open.data?.length ?? 0)
+        if (all.error) {
+          lock.steps.push({ label: `${name}：確認できませんでした`, ok: false, detail: all.error.message })
+        } else if (visible > 0) {
+          lock.steps.push({ label: `${name}：公開キーで ${visible} 件読めてしまいます`, ok: false, detail: '鍵（RLS）がかかっていません' })
+        } else if (total === 0) {
+          lock.steps.push({ label: `${name}：公開キーでは読めません`, ok: true, detail: 'データが0件のため、鍵が効いているかまでは判定できません' })
+        } else {
+          lock.steps.push({ label: `${name}：公開キーでは読めません（専用キーでは ${total} 件）`, ok: true })
+        }
+      }
+
+      const [mine, theirs] = await Promise.all([
+        admin.storage.from(KARTE_IMAGE_BUCKET).list('', { limit: 5 }),
+        pub.storage.from(KARTE_IMAGE_BUCKET).list('', { limit: 5 }),
+      ])
+      const seen = theirs.error ? 0 : (theirs.data?.length ?? 0)
+      lock.steps.push(
+        seen > 0
+          ? { label: `カルテの写真：公開キーで一覧が見えてしまいます`, ok: false }
+          : { label: `カルテの写真：公開キーでは見えません`, ok: true, detail: mine.data?.length ? undefined : '写真が0件のため、鍵が効いているかまでは判定できません' },
+      )
+    } catch (e) {
+      lock.steps.push({ label: '鍵の確認', ok: false, detail: e instanceof Error ? e.message : String(e) })
+    }
+  }
+  const lockOk = !lock.ran || lock.steps.every((s) => s.ok)
+
+  const loginLimiter = await isLoginLimiterReady()
+
+  return NextResponse.json({ ok: keyOk && storageOk, key, similarEnvNames, storage, lock, lockOk, loginLimiter })
 }

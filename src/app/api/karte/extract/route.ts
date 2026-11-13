@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { NextRequest, NextResponse } from 'next/server'
 import { getVisibleSections } from '@/lib/karteSections'
 import type { PetType } from '@/types'
+import { requireSession } from '@/lib/auth'
 
 // 手書きの読み取りは報告文の生成より時間がかかる
 export const maxDuration = 60
@@ -25,6 +26,9 @@ const SYSTEM_PROMPT = `あなたはペットシッターサービスの事務ア
 - 敬語や説明文は不要。スタッフが現場で素早く読める簡潔な書き方にする`
 
 export async function POST(req: NextRequest) {
+  const denied = await requireSession()
+  if (denied) return denied
+
   try {
     const { images, petTypes } = (await req.json()) as { images?: string[]; petTypes?: PetType[] }
 
