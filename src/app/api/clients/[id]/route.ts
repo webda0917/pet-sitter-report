@@ -8,10 +8,11 @@ import {
   MAX_IMAGES_PER_SECTION,
 } from '@/lib/supabaseServer'
 
-type Ctx = { params: { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // 顧客の基本情報、またはカルテを更新する（送られてきた項目だけ）
 export async function PATCH(req: NextRequest, { params }: Ctx) {
+  const { id } = await params
   const body = (await req.json()) as {
     name?: string
     furigana?: string
@@ -34,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     const { data: current, error: readError } = await getSupabaseServer()
       .from('clients')
       .select('karte')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
     if (readError) {
       console.error('clients PATCH read error:', readError)
@@ -47,7 +48,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
     if (body.karteImages !== undefined) {
       images = {}
       for (const [key, paths] of Object.entries(body.karteImages)) {
-        const valid = (Array.isArray(paths) ? paths : []).filter((p) => isKarteImagePath(p, params.id))
+        const valid = (Array.isArray(paths) ? paths : []).filter((p) => isKarteImagePath(p, id))
         if (valid.length) images[key] = valid.slice(0, MAX_IMAGES_PER_SECTION)
       }
     }
@@ -66,7 +67,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
   const { data, error } = await getSupabaseServer()
     .from('clients')
     .update(update)
-    .eq('id', params.id)
+    .eq('id', id)
     .select('karte_updated_at')
     .single()
   if (error) {
@@ -82,7 +83,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, { params }: Ctx) {
-  const { error } = await getSupabaseServer().from('clients').delete().eq('id', params.id)
+  const { id } = await params
+  const { error } = await getSupabaseServer().from('clients').delete().eq('id', id)
   if (error) {
     console.error('clients DELETE error:', error)
     return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
@@ -90,9 +92,9 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
 
   // カルテの添付画像もまとめて消す（失敗しても顧客の削除は完了扱い）
   const bucket = getSupabaseServer().storage.from(KARTE_IMAGE_BUCKET)
-  const { data: files } = await bucket.list(params.id, { limit: 100 })
+  const { data: files } = await bucket.list(id, { limit: 100 })
   if (files?.length) {
-    const { error: rmError } = await bucket.remove(files.map((f) => `${params.id}/${f.name}`))
+    const { error: rmError } = await bucket.remove(files.map((f) => `${id}/${f.name}`))
     if (rmError) console.error('karte image remove error:', rmError)
   }
   return NextResponse.json({ ok: true })

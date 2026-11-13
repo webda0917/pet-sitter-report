@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { SESSION_COOKIE, verifySessionToken } from '@/lib/session'
 
-// ログイン画面・ログインAPI・静的ファイル以外はすべてログイン必須
+// ビルド済みの JS・CSS 以外は、すべてここを通す
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|icon.png|logo.svg|manifest.json|login|api/login).*)'],
+  matcher: ['/((?!_next/static/).*)'],
 }
 
+// ログインせずに開けるのは、ログイン画面・ログインAPI・アイコン類だけ（完全一致）
+const PUBLIC_PATHS = new Set(['/login', '/api/login', '/favicon.ico', '/icon.png', '/logo.svg', '/manifest.json'])
+
 export async function middleware(req: NextRequest) {
+  if (PUBLIC_PATHS.has(req.nextUrl.pathname)) return NextResponse.next()
+
   const ok = await verifySessionToken(req.cookies.get(SESSION_COOKIE)?.value)
   if (ok) return NextResponse.next()
 
